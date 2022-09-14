@@ -1,0 +1,49 @@
+defaults:
+  - model: l96_simulator
+  - assimilator: l96_conv_assimilator
+  - datamodule: l96_observations
+  - lightning_module: data_assimilation
+  - optimizer: adam
+  - trainer: default
+  - logger: tensorboard
+
+  - override hydra/launcher: local
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+  - _self_
+
+output_dir_base_path: ./outputs
+
+trainer:
+  max_epochs: 20
+
+logger:
+  tensorboard:
+    save_dir: ${output_dir_base_path}/tensorboard/
+    default_hp_metric: False # important to be False, when we want to use own hp_metrics
+
+callbacks:
+  CheckpointCallback:
+    _target_: "pytorch_lightning.callbacks.ModelCheckpoint"
+    monitor: "total_loss/valid"
+    save_top_k: 1
+    save_last: true
+    mode: "min"
+    verbose: false
+    dirpath: "./logs/checkpoints/"  # use  relative path, so it can be adjusted by hydra
+    filename: "{epoch:02d}"
+  EarlyStoppingCallback:
+    _target_: "pytorch_lightning.callbacks.EarlyStopping"
+    monitor: "total_loss/valid"
+    min_delta: 0.00
+    patience: 5
+    verbose: true
+    mode: "min"
+
+hydra:
+  sweep:
+    dir: ${output_dir_base_path}/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${output_dir_base_path}/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
