@@ -44,7 +44,6 @@ class DataAssimilationModule(pl.LightningModule):
         neighbors = neighbors.squeeze()
         target = target.squeeze()
         target_mask = target_mask.squeeze()
-        print(neighbors[0].shape)
         ic_left = self.assimilation_model.forward(neighbors[0])
         ic_right = self.assimilation_model.forward(neighbors[1])
 
@@ -63,6 +62,10 @@ class DataAssimilationModule(pl.LightningModule):
         self.log('data_loss/train', data_loss)
         self.log('model_loss/train', model_loss)
         return loss
+
+    def on_save_checkpoint(self, checkpoint):
+        state_dict = self.assimilation_model.state_dict()
+        torch.save(state_dict, "assimilator.ckpt")
 
     def validation_step(self, batch, batch_index):
         neighbors, target, target_mask, params = batch

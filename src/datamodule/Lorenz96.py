@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -86,9 +88,12 @@ class L96DataLoader(pl.LightningDataModule):
         super().__init__()
         self.path = path
         if path:
+            logging.info(f"Loading observations from path: {path}")
             self.data, self.model_params = self.load_data()
         else:
+            logging.info(f"Generationg default observations")
             self.data, self.model_params = self.generate_observations()
+
         self.chunk_size = chunk_size
         self.train_split, self.val_split = train_split, val_split
         self.batch_size = batch_size
@@ -98,7 +103,10 @@ class L96DataLoader(pl.LightningDataModule):
         self.pin_memory = pin_memory
 
     def load_data(self):
-        raise NotImplementedError
+        data: dict = np.load(self.path, allow_pickle=True).item()
+        x = data["x_obs"].unsqueeze(0)
+        params = data["params"]
+        return x, params
 
     def setup(self, stage=None):
         train_end = int(self.data.size(-1) * self.train_split)
@@ -124,11 +132,11 @@ class L96DataLoader(pl.LightningDataModule):
         )
 
     def generate_observations(self, dt=0.01, k=40, j=10, f=8, c=1, h=10, b=10, n_steps=500, spin_up_steps=500,
-                              seed=1000, noise_sigma=1., part_missing=0.1, levels=1):
-        torch.manual_seed(seed)
+                              noise_sigma=1., part_missing=0.1, levels=1):
         params = {
             "f": f,
         }
+
         if levels == 1:
             x = self.simulate_lorenz96_one_level(dt, k, f, n_steps, spin_up_steps)
             x = x.unsqueeze(0)
@@ -141,7 +149,9 @@ class L96DataLoader(pl.LightningDataModule):
         else:
             raise NotImplementedError
 
+        torch.save(x, "simulation_true.tensor")
         x = self.corrupt_simulation(x, noise_sigma, part_missing)
+        torch.save(x, "observations.tensor")
         return x, params
 
     @staticmethod

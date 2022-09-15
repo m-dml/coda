@@ -14,9 +14,13 @@ defaults:
   - _self_
 
 output_dir_base_path: ./outputs
+random_seed: 101
+
+datamodule:
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-86287784.npy"
 
 trainer:
-  max_epochs: 20
+  max_epochs: 1000
 
 logger:
   tensorboard:

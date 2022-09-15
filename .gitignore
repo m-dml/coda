@@ -1,5 +1,7 @@
-# output directory
+# working directory
 outputs/
+data/
+
 
 # Idea dot files
 .idea/
