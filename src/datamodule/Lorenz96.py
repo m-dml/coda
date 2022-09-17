@@ -1,5 +1,5 @@
 import logging
-
+from typing import Tuple
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -14,6 +14,8 @@ class AssimilationDataset(Dataset):
                  data: torch.Tensor,
                  params: dict,
                  chunk_size: int,
+                 window: Tuple[int] = None,
+                 include_last_chunk: bool = False,
                  ):
         super().__init__()
         self.data = data
@@ -22,11 +24,22 @@ class AssimilationDataset(Dataset):
         self.mask[self.data == 0] = 0
         self.data[self.mask == 0] = 0
         self.chunk_size = chunk_size
-        index_tensor = (
-            torch.arange(chunk_size, self.total_time_steps - 2*chunk_size, chunk_size),
-            torch.arange(2*chunk_size, self.total_time_steps - chunk_size, chunk_size),
-        )
+
+        if include_last_chunk:
+            index_tensor = (
+                torch.arange(0, self.total_time_steps - chunk_size, chunk_size),
+                torch.arange(chunk_size, self.total_time_steps, chunk_size),
+            )
+        else:
+            index_tensor = (
+                torch.arange(0, self.total_time_steps - 2*chunk_size, chunk_size),
+                torch.arange(chunk_size, self.total_time_steps - chunk_size, chunk_size),
+            )
         self.index_tensor = torch.stack(index_tensor, dim=-1)
+        if window:
+            self.window = window
+        else:
+            self.window = (chunk_size, int(chunk_size/2))
 
     @property
     def half_chunk_size(self) -> int:
@@ -56,20 +69,35 @@ class AssimilationDataset(Dataset):
         return data, mask
 
     def get_feed_forward_inputs(self, index):
-        ic, ic_next = self.index_tensor[index]
-        ic_prev = ic - self.chunk_size
-        half_size = self.half_chunk_size
+        input = [self._slice_neighborhood(ic) for ic in self.index_tensor[index]]
+        return torch.stack(input)
 
-        neighborhood_left = self.data[..., ic_prev: ic+half_size]
-        neighborhood_right = self.data[..., ic: ic_next+half_size]
-        mask_neighborhood_left = self.mask[..., ic_prev: ic+half_size]
-        mask_neighborhood_right = self.mask[..., ic: ic_next+half_size]
+    def _slice_neighborhood(self, ic_index):
+        size = torch.as_tensor(self.data.shape)
 
-        neighborhoods = (
-            torch.cat((neighborhood_left, mask_neighborhood_left), dim=0),
-            torch.cat((neighborhood_right, mask_neighborhood_right), dim=0),
-        )
-        return torch.stack(neighborhoods)
+        left_index = ic_index - self.window[0]
+        right_index = ic_index + self.window[1] + 1
+
+        neighbors, mask = [], []
+        if left_index < 0:
+            size[-1] = abs(left_index)
+            patch = torch.full(torch.Size(size), 0)
+            neighbors.append(patch)
+            mask.append(patch)
+            left_index = 0
+
+        neighbors.append(self.data[..., left_index:right_index])
+        mask.append(self.mask[..., left_index:right_index])
+
+        if right_index - self.total_time_steps > 0:
+            size[-1] = right_index - self.total_time_steps
+            patch = torch.full(torch.Size(size), 0)
+            neighbors.append(patch)
+            mask.append(patch)
+
+        neighbors = torch.concat(neighbors, dim=-1)
+        mask = torch.concat(mask, dim=-1)
+        return torch.concat((neighbors, mask), dim=0)
 
 
 class L96DataLoader(pl.LightningDataModule):
@@ -77,6 +105,7 @@ class L96DataLoader(pl.LightningDataModule):
     def __init__(self,
                  path: str = None,
                  chunk_size: int = 10,
+                 window: Tuple[int] = None,
                  train_split=0.7,
                  val_split=0.3,
                  batch_size=1,
@@ -95,6 +124,7 @@ class L96DataLoader(pl.LightningDataModule):
             self.data, self.model_params = self.generate_observations()
 
         self.chunk_size = chunk_size
+        self.window = window
         self.train_split, self.val_split = train_split, val_split
         self.batch_size = batch_size
         self.shuffle_train = shuffle_train
@@ -110,8 +140,8 @@ class L96DataLoader(pl.LightningDataModule):
 
     def setup(self, stage=None):
         train_end = int(self.data.size(-1) * self.train_split)
-        self.train = AssimilationDataset(self.data[..., :train_end], self.model_params, self.chunk_size)
-        self.valid = AssimilationDataset(self.data[..., train_end:], self.model_params, self.chunk_size)
+        self.train = AssimilationDataset(self.data[..., :train_end], self.model_params, self.chunk_size, self.window)
+        self.valid = AssimilationDataset(self.data[..., train_end:], self.model_params, self.chunk_size, self.window)
 
     def train_dataloader(self):
         return DataLoader(
