@@ -17,7 +17,7 @@ output_dir_base_path: ./outputs
 random_seed: 101
 
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-86287784.npy"
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-72813991.npy"
 
 trainer:
   max_epochs: 1000

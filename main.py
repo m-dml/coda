@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.INFO)
 @hydra.main(config_path='conf', config_name='config.yaml')
 def main(cfg: omegaconf.DictConfig):
 
+    print(cfg.datamodule.path)
     if cfg.random_seed:
         logging.info(f"Appling random seed: {cfg.random_seed}")
         pl.seed_everything(cfg.random_seed)
