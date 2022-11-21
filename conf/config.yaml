@@ -1,6 +1,6 @@
 defaults:
   - model: l96_simulator
-  - assimilator: l96_conv_assimilator
+  - assimilator: l96_unet_assimilator
   - datamodule: l96_observations
   - lightning_module: data_assimilation
   - optimizer: adam
@@ -17,7 +17,7 @@ output_dir_base_path: ./outputs
 random_seed: 101
 
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-72813991.npy"
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-60073583.npy"
 
 trainer:
   max_epochs: 1000

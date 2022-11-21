@@ -1,0 +1,41 @@
+_target_: "unet.model.asymmetric_unet.Unet"
+in_channels: 2
+out_channels: 1
+
+encoder_dim: 2
+encoder_layers:
+  - [32, 32]
+  - [64, 64]
+  - [128, 128]
+encoder_kwargs:
+  conv_type: "periodic"
+  kernel_size: 3
+  padding: 1
+  stride: 1
+  n_dims: 2
+pooling_kwargs:
+  kernel_size: 2
+  stride: 2
+  padding: 0
+  n_dims: 2
+
+decoder_dim: 1
+decoder_layers:
+  - [128, 64]
+  - [64, 32]
+  - [32, 32]
+decoder_kwargs:
+  conv_type: "periodic"
+  kernel_size: 3
+  padding: 3
+  stride: 1
+  n_dims: 1
+
+output_block_kwargs:
+  conv_type: "periodic"
+  kernel_size: 3
+  padding: 3
+  stride: 1
+  n_dims: 1
+
+global_pooling_type: "avg"

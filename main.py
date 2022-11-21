@@ -20,6 +20,7 @@ def main(cfg: omegaconf.DictConfig):
 
     logging.info(f"Instantiating <{cfg.assimilator._target_}>")
     assimilator: nn.Module = hydra.utils.instantiate(cfg.assimilator)
+    print(assimilator)
 
     logger: list = []
     logging.info(f"Instantiating logger <{cfg.logger._target_}>")

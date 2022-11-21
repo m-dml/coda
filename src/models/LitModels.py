@@ -44,16 +44,17 @@ class DataAssimilationModule(pl.LightningModule):
         neighbors = neighbors.squeeze()
         target = target.squeeze()
         target_mask = target_mask.squeeze()
-        ic_left = self.assimilation_model.forward(neighbors[0])
-        ic_right = self.assimilation_model.forward(neighbors[1])
+        ic_left = self.assimilation_model.forward(neighbors[0].unsqueeze(0))
+        ic_right = self.assimilation_model.forward(neighbors[1].unsqueeze(0))
 
-        rollout = self.forward(ic_left.unsqueeze(0), **params)
+        rollout = self.forward(ic_left, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
+
 
         model_loss = self.objective(ic_right, rollout[..., -1])
         data_loss = self.objective(target[0], rollout[..., :-1].squeeze(), target_mask[0])
 
-        rollout = self.forward(ic_right.unsqueeze(0), **params)
+        rollout = self.forward(ic_right, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
         data_loss += self.objective(target[1], rollout[..., :-1].squeeze(), target_mask[1])
 
@@ -73,16 +74,15 @@ class DataAssimilationModule(pl.LightningModule):
         target = target.squeeze()
         target_mask = target_mask.squeeze()
 
-        ic_left = self.assimilation_model.forward(neighbors[0])
-        ic_right = self.assimilation_model.forward(neighbors[1])
+        ic_left = self.assimilation_model.forward(neighbors[0].unsqueeze(0))
+        ic_right = self.assimilation_model.forward(neighbors[1].unsqueeze(0))
 
-        rollout = self.forward(ic_left.unsqueeze(0), **params)
+        rollout = self.forward(ic_left, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
-
         model_loss = self.objective(ic_right, rollout[..., -1])
         data_loss = self.objective(target[0], rollout[..., :-1].squeeze(), target_mask[0])
 
-        rollout = self.forward(ic_right.unsqueeze(0), **params)
+        rollout = self.forward(ic_right, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
         data_loss += self.objective(target[1], rollout[..., :-1].squeeze(), target_mask[1])
 

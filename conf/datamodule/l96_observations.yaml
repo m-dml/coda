@@ -1,7 +1,7 @@
 _target_: "src.datamodule.Lorenz96.L96DataLoader"
 path: null
-chunk_size: 5
-window: [10, 5]
+chunk_size: 10
+window: [15, 15]
 train_split: 0.7
 val_split: 0.3
 shuffle_train: true

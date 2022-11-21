@@ -37,3 +37,4 @@ dependencies:
       - hydra-colorlog
       - hydra-optuna-sweeper
       - hydra-submitit-launcher
+      - "git+https://github.com/m-dml/unet-pytorch.git"
