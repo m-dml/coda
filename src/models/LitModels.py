@@ -1,7 +1,6 @@
 import pytorch_lightning as pl
 import hydra
 import torch
-import torch.nn as nn
 import logging
 from src.utils.Loss4DVar import WeakConstraintLoss
 
@@ -28,11 +27,19 @@ class DataAssimilationModule(pl.LightningModule):
             rollout.append(x)
         return torch.stack(rollout, -1).squeeze()
 
-    def forward(self, batch):
+    @staticmethod
+    def _preprocess_batch(batch):
         ff_input, target, params = batch
         ff_input = ff_input.squeeze()
         target = target.squeeze()
+        return ff_input, target, params
+
+    def forward(self, ff_input, target, params):
         initial_conditions = self.assimilation_model.forward(ff_input)
+        # initial_conditions = [
+        #     self.assimilation_model.forward(ff_input[0]),
+        #     self.assimilation_model.forward(ff_input[1]),
+        # ]
         rollout_combined = []
         for ic in initial_conditions:
             rollout = self.get_rollout(ic.unsqueeze(0), **params)
@@ -41,8 +48,8 @@ class DataAssimilationModule(pl.LightningModule):
         return initial_conditions[-1], rollout_combined
 
     def training_step(self, batch, batch_index):
-        _, target, _ = batch
-        ic_next, rollout_combined = self.forward(batch)
+        ff_input, target, params = self._preprocess_batch(batch)
+        ic_next, rollout_combined = self.forward(ff_input, target, params)
         loss = self.objective(target, rollout_combined, ic_next)
 
         self.log('total_loss/train', loss)
@@ -51,8 +58,8 @@ class DataAssimilationModule(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_index):
-        _, target, _ = batch
-        ic_next, rollout_combined = self.forward(batch)
+        ff_input, target, params = self._preprocess_batch(batch)
+        ic_next, rollout_combined = self.forward(ff_input, target, params)
         loss = self.objective(target, rollout_combined, ic_next)
 
         self.log('total_loss/valid', loss)

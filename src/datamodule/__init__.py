@@ -14,7 +14,9 @@ class Dataset4DVar(Dataset):
             window: Tuple[int, int] = (3, 3),
     ):
         mask = torch.full(data.size(), 1)
-        mask[np.isnan(data)] = 0
+        masked_indexes = np.isnan(data)
+        mask[masked_indexes] = 0
+        data[masked_indexes] = 0
         self.data = torch.stack((data, mask), 0)
         self.params = params
         self.chunk_size = chunk_size

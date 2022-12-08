@@ -14,6 +14,7 @@ encoder_kwargs:
   stride: 1
   n_dims: 2
 pooling_kwargs:
+  pool_type: "avg"
   kernel_size: 2
   stride: 2
   padding: 0

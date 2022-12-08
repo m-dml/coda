@@ -90,7 +90,7 @@ class RungeKutta4thOrder(nn.Module):
 
 class L96AssimilationModel(nn.Module):
 
-    def __init__(self, in_channels=2, input_size=(40, 15), activation=nn.ReLU()):
+    def __init__(self, in_channels=2, input_size=(40, 7), activation=nn.ReLU()):
         super().__init__()
 
         self.activation = activation
