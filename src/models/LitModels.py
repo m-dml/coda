@@ -34,29 +34,26 @@ class DataAssimilationModule(pl.LightningModule):
 
     def forward(self, ic, **kwargs):
         rollout = [ic]
-        for i in range(self.chunk_size):
+        for i in range(self.chunk_size-1):
             x = self.model.forward(rollout[-1], **kwargs)
             rollout.append(x)
         return torch.cat(rollout, 0)
 
     def training_step(self, batch, batch_index):
-        neighbors, target, target_mask, params = batch
-        neighbors = neighbors.squeeze()
+        ff_input, target, params = batch
+        ff_input = ff_input.squeeze()
         target = target.squeeze()
-        target_mask = target_mask.squeeze()
-        ic_left = self.assimilation_model.forward(neighbors[0].unsqueeze(0))
-        ic_right = self.assimilation_model.forward(neighbors[1].unsqueeze(0))
+        ic = self.assimilation_model.forward(ff_input[0].unsqueeze(0))
+        ic_next = self.assimilation_model.forward(ff_input[1].unsqueeze(0))
 
-        rollout = self.forward(ic_left, **params)
+        rollout = self.forward(ic, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
+        model_loss = self.objective(ic_next, rollout[..., -1])
+        data_loss = self.objective(target[0, 0], rollout.squeeze(), target[0, 1])
 
-
-        model_loss = self.objective(ic_right, rollout[..., -1])
-        data_loss = self.objective(target[0], rollout[..., :-1].squeeze(), target_mask[0])
-
-        rollout = self.forward(ic_right, **params)
+        rollout = self.forward(ic_next, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
-        data_loss += self.objective(target[1], rollout[..., :-1].squeeze(), target_mask[1])
+        data_loss += self.objective(target[1, 0], rollout.squeeze(), target[1, 1])
 
         loss = data_loss + self.alpha * model_loss
         self.log('total_loss/train', loss)
@@ -69,22 +66,20 @@ class DataAssimilationModule(pl.LightningModule):
         torch.save(state_dict, "assimilator.ckpt")
 
     def validation_step(self, batch, batch_index):
-        neighbors, target, target_mask, params = batch
-        neighbors = neighbors.squeeze()
+        ff_input, target, params = batch
+        ff_input = ff_input.squeeze()
         target = target.squeeze()
-        target_mask = target_mask.squeeze()
+        ic = self.assimilation_model.forward(ff_input[0].unsqueeze(0))
+        ic_next = self.assimilation_model.forward(ff_input[1].unsqueeze(0))
 
-        ic_left = self.assimilation_model.forward(neighbors[0].unsqueeze(0))
-        ic_right = self.assimilation_model.forward(neighbors[1].unsqueeze(0))
-
-        rollout = self.forward(ic_left, **params)
+        rollout = self.forward(ic, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
-        model_loss = self.objective(ic_right, rollout[..., -1])
-        data_loss = self.objective(target[0], rollout[..., :-1].squeeze(), target_mask[0])
+        model_loss = self.objective(ic_next, rollout[..., -1])
+        data_loss = self.objective(target[0, 0], rollout.squeeze(), target[0, 1])
 
-        rollout = self.forward(ic_right, **params)
+        rollout = self.forward(ic_next, **params)
         rollout = torch.permute(rollout, (1, -1, 0))
-        data_loss += self.objective(target[1], rollout[..., :-1].squeeze(), target_mask[1])
+        data_loss += self.objective(target[1, 0], rollout.squeeze(), target[1, 1])
 
         loss = data_loss + self.alpha * model_loss
         self.log('total_loss/valid', loss)

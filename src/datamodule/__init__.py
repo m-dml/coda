@@ -59,4 +59,4 @@ class Dataset4DVar(Dataset):
         ff_input = torch.stack(ff_input, 0)
         target = [self.get_target(i)  for i in [iic, iic_next]]
         target = torch.stack(target, 0)
-        return ff_input, target
+        return ff_input, target, self.params
