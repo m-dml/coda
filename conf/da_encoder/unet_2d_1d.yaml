@@ -1,4 +1,7 @@
-_target_: "unet.model.asymmetric_unet.Unet"
+defaults:
+  - unet
+  - _self_
+
 in_channels: 2
 out_channels: 1
 
@@ -30,6 +33,11 @@ decoder_kwargs:
   kernel_size: 3
   padding: 3
   stride: 1
+  n_dims: 1
+upconv_kwargs:
+  kernel_size: 2
+  stride: 2
+  padding: 0
   n_dims: 1
 
 output_block_kwargs:

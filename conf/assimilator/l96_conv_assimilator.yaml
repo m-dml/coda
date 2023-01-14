@@ -1,5 +1,0 @@
-_target_: "src.models.L96Model.L96AssimilationModel"
-in_channels: 2
-input_size: [40, 16]
-activation:
-  _target_: "torch.nn.ReLU"

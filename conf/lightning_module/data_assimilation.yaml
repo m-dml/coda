@@ -1,3 +1,0 @@
-_target_: "src.models.LitModels.DataAssimilationModule"
-_recursive_: false
-chunk_size: 10

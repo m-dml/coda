@@ -1,3 +1,0 @@
-_target_: "src.models.L96Model.RungeKutta4thOrder"
-_recursive_: false
-dt: 0.01

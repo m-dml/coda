@@ -1,51 +1,32 @@
 defaults:
-  - model: l96_simulator
-  - assimilator: l96_unet_assimilator
-  - datamodule: l96_observations
-  - lightning_module: data_assimilation
+  - base_config
+#  - /hydra/callbacks:
+#      - log_git_hash
+  - model: l96_base
+  - da_encoder: unet_2d_1d
+  - datamodule: l96_datamodule
+  - lightning_module: base_lightning_module
   - optimizer: adam
-  - trainer: default
-  - logger: tensorboard
+  - trainer: base_trainer
+  - logger/tensorboard: tensorboard
+  - callbacks/checkpoint: model_checkpoint
+  - callbacks/early_stopping: early_stopping
 
   - override hydra/launcher: local
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
-  - _self_
+  - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
-output_dir_base_path: ./outputs
-random_seed: 101
-
-datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-60073583.npy"
-
-trainer:
-  max_epochs: 1000
+output_dir_base_path: "/home/vadim/Dev/hidden-process-learning/outputs"
 
 logger:
   tensorboard:
-    save_dir: ${output_dir_base_path}/tensorboard/
-    default_hp_metric: False # important to be False, when we want to use own hp_metrics
-
-callbacks:
-  CheckpointCallback:
-    _target_: "pytorch_lightning.callbacks.ModelCheckpoint"
-    monitor: "total_loss/valid"
-    save_top_k: 1
-    save_last: true
-    mode: "min"
-    verbose: false
-    dirpath: "./logs/checkpoints/"  # use  relative path, so it can be adjusted by hydra
-    filename: "{epoch:02d}"
-  EarlyStoppingCallback:
-    _target_: "pytorch_lightning.callbacks.EarlyStopping"
-    monitor: "total_loss/valid"
-    min_delta: 0.00
-    patience: 5
-    verbose: true
-    mode: "min"
+    default_hp_metric: false # important to be False, when we want to use own hp_metrics
 
 hydra:
+  job:
+    chdir: true
   sweep:
     dir: ${output_dir_base_path}/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
     subdir: ${hydra.job.num}

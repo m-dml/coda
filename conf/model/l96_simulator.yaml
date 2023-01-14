@@ -1,7 +1,0 @@
-defaults:
-  - tendencies_model: lorenz96
-  - solver: rk4
-
-_target_: "src.models.SuperModel"
-_recursive_: false
-parametrization: null

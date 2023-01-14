@@ -5,7 +5,7 @@ channels:
   - pytorch
 
 dependencies:
-  - python=3.8
+  - python=3.10
   - pip
   - cudatoolkit
   - pytorch
@@ -37,4 +37,5 @@ dependencies:
       - hydra-colorlog
       - hydra-optuna-sweeper
       - hydra-submitit-launcher
+      - torchdiffeq
       - "git+https://github.com/m-dml/unet-pytorch.git"
