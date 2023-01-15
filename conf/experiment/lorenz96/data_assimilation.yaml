@@ -15,6 +15,22 @@ defaults:
 random_seed: 101
 output_dir_base_path: "/gpfs/work/zinchenk/hpl/lorenz96_logs/data_assimilation/"
 
+datamodule:
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-65402354.pkl"
+  chunk_size: 25
+  window: [15, 15]
+  training_split: 0.8
+  shuffle_train: true
+  shuffle_valid: false
+
+lightning_module:
+  rollout_length: 25
+  time_step: 0.01
+  alpha: 1.25
+
+trainer:
+  max_epochs: 100
+
 logger:
   tensorboard:
     default_hp_metric: false # important to be False, when we want to use own hp_metrics
