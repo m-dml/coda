@@ -9,5 +9,6 @@ class LitModule:
     _recursive_: bool = False
     model: Any = None
     encoder: Any = None
-    # chunk_size: int = 2
-
+    rollout_length: int = 5
+    time_step: float = 0.01
+    alpha: float = 1.25

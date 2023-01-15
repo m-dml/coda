@@ -1,0 +1,12 @@
+defaults:
+  - l96_datamodule
+  - _self_
+path: /home/vadim/Dev/hidden-process-learning/data/l96-1-65402354.pkl
+chunk_size: 10
+window: [15, 15]
+training_split: 0.8
+shuffle_train: true
+shuffle_valid: false
+batch_size:  1
+num_workers:  0
+pin_memory: false

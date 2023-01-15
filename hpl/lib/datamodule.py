@@ -6,7 +6,7 @@ from hydra.conf import MISSING
 @dataclass
 class L96DataModule:
     _target_: str = "hpl.datamodule.DataLoader.L96DataModule"
-    path: str = "/home/vadim/Dev/hidden-process-learning/data/l96-1-65402354.npy"
+    path: str = MISSING
     chunk_size: int = 2
     window: Tuple[int, int] = (25, 25)
     training_split: float = 1.0

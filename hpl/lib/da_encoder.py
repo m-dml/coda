@@ -21,3 +21,4 @@ class Unet:
 
     output_block_kwargs: Any = MISSING
     global_pooling_type: str = "avg"
+    global_pooling_dim: int = -2

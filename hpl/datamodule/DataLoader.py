@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
+import pickle
 
 
 def preprocess_data(data: torch.Tensor):
@@ -10,13 +11,13 @@ def preprocess_data(data: torch.Tensor):
         data (torch.Tensor): masked observations by nan values
 
     Returns (torch.Tensor):
-        binary mask added as channel. nan values replaced by zeros
+        extract mask from observations
     """
     mask = torch.full(data.size(), 1)
     masked_indexes = np.isnan(data)
     mask[masked_indexes] = 0
     data[masked_indexes] = 0
-    return torch.stack((data, mask), 0)
+    return data, mask
 
 
 def slice_and_patch(data: torch.Tensor, start: int, end: int):
@@ -35,7 +36,7 @@ def slice_and_patch(data: torch.Tensor, start: int, end: int):
         size[0] = abs(start)
         parts.append(torch.zeros(size))
         start = 0
-    parts.append(data[..., start:end])
+    parts.append(data[start:end])
     if end > data.size(0):
         size[0] = end - data.size(0)
         parts.append(torch.zeros(size))
@@ -47,11 +48,21 @@ class L96Dataset(Dataset):
     """Basic Lorenz96 Dataset for Data Assimilation problem
     Args:
         data (data: torch.Tensor): observational data on L96 system
+        mask (data: torch.Tensor): observational mask
         chunk_size (int): number of time-steps between two initial conditions
         window_size (int, int): number of time-steps used for feed forward path
     """
-    def __init__(self, data: torch.Tensor, chunk_size: int, window_size: (int, int)):
+    def __init__(
+            self,
+            data: torch.Tensor,
+            mask: torch.tensor,
+            chunk_size: int,
+            window_size: (int, int),
+    ):
+        if data.shape != mask.shape:
+            raise ValueError("data and mask must have the same shape")
         self.data = data
+        self.mask = mask
         self.chunk_size = chunk_size
         self.window = window_size
 
@@ -68,6 +79,16 @@ class L96Dataset(Dataset):
     def __len__(self):
         return len(self.sampling_indexes)
 
+    def prepare_feed_forward_input(self, index: int):
+        data = slice_and_patch(self.data, index-self.window[0], index+self.window[1])
+        mask = slice_and_patch(self.data, index-self.window[0], index+self.window[1])
+        return torch.stack((data, mask), dim=0)
+
+    def prepare_observations(self, left: int, right: int):
+        data = slice_and_patch(self.data, left, right+1)
+        mask = slice_and_patch(self.mask, left, right+1)
+        return torch.stack((data, mask), dim=0)
+
     def __getitem__(self, item):
         """
         Returns (torch.Tensor, torch.Tensor):
@@ -75,15 +96,9 @@ class L96Dataset(Dataset):
         """
         index = self.sampling_indexes[item]
         left, right = self.ics_chunks[index]
-        rollout = slice_and_patch(self.data, left, right+1)
-        feed_forward = torch.stack(
-            (
-                slice_and_patch(self.data, left-self.window[0], left+self.window[1]),
-                slice_and_patch(self.data, right-self.window[0], right+self.window[1]),
-            ),
-            dim=0,
-        )
-        return feed_forward, rollout
+        return (self.prepare_feed_forward_input(left),
+                self.prepare_feed_forward_input(right),
+                self.prepare_observations(left, right))
 
 
 class L96DataModule(pl.LightningModule):
@@ -122,19 +137,22 @@ class L96DataModule(pl.LightningModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
-    def _load_observations(self, path: str):
-        data: dict = np.load(path, allow_pickle=True).item()
-        x: torch.Tensor = data["x_obs"].unsqueeze(0)
-        return x
+    @staticmethod
+    def _load_observations(path: str):
+        with open(path, 'rb') as file:
+            data: dict = pickle.load(file)
+        x: torch.Tensor = data["x_obs"]
+        x, mask = preprocess_data(x)
+        return x, mask
 
     def setup(self, stage: str = "training"):
-        x = self._load_observations(self.path)
+        x, mask = self._load_observations(self.path)
         if self.training_split == 1:
-            self.train = L96Dataset(x, self.chunk_size, self.window)
+            self.train = L96Dataset(x, mask, self.chunk_size, self.window)
         else:
-            train_split_end = self.training_split * len(x)
-            self.train = L96Dataset(x[:train_split_end], self.chunk_size, self.window)
-            self.valid = L96Dataset(x[train_split_end:], self.chunk_size, self.window)
+            train_split_end = int(self.training_split * len(x))
+            self.train = L96Dataset(x[:train_split_end], mask[:train_split_end], self.chunk_size, self.window)
+            self.valid = L96Dataset(x[train_split_end:], mask[train_split_end:], self.chunk_size, self.window)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

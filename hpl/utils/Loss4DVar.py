@@ -33,12 +33,10 @@ class WeakConstraintLoss(BaseLossDA):
             rollout: torch.Tensor,
             ic_next: torch.Tensor,
     ):
-        pass
-        # mask = target_and_mask[:, 1, ...]
-        # target = target_and_mask[:, 0, ...]
-        # self.data_loss = self.masked_mse(rollout, target, mask)
-        #
-        # ic_predicted = rollout[0, ..., -1].unsqueeze(0)
-        # self.model_loss = self.masked_mse(ic_next, ic_predicted)
-        # loss = self.data_loss + self.alpha * self.model_loss
-        # return loss
+        mask = target_and_mask[:, 1, ...]
+        target = target_and_mask[:, 0, ...]
+        self.data_loss = self.masked_mse(rollout, target, mask)
+        ic_predicted = rollout[-1, ...]
+        self.model_loss = self.masked_mse(ic_next.squeeze(), ic_predicted.squeeze())
+        loss = self.data_loss + self.alpha * self.model_loss
+        return loss

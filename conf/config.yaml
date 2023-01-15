@@ -4,10 +4,10 @@ defaults:
 #      - log_git_hash
   - model: l96_base
   - da_encoder: unet_2d_1d
-  - datamodule: l96_datamodule
-  - lightning_module: base_lightning_module
+  - datamodule: l96_observations
+  - lightning_module: default
   - optimizer: adam
-  - trainer: base_trainer
+  - trainer: default
   - logger/tensorboard: tensorboard
   - callbacks/checkpoint: model_checkpoint
   - callbacks/early_stopping: early_stopping

@@ -1,0 +1,7 @@
+defaults:
+  - base_lightning_module
+  - _self_
+
+rollout_length: 10
+time_step: 0.01
+alpha: 1.25

@@ -48,3 +48,4 @@ output_block_kwargs:
   n_dims: 1
 
 global_pooling_type: "avg"
+global_pooling_dim: -2
