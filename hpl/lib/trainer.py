@@ -42,4 +42,4 @@ class Trainer:
     amp_level: Any = None
     move_metrics_to_cpu: bool = False
     accelerator: Any = None
-    devices: Any = None
+    devices: Any = 1
