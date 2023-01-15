@@ -1,0 +1,6 @@
+# @package _global_
+hydra:
+  callbacks:
+    log_git_hash:
+      _target_: "hpl.lib.hydra_callbacks.LogGitHash"
+      git_hash: null
