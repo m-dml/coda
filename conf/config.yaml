@@ -12,7 +12,7 @@ defaults:
   - callbacks/checkpoint: model_checkpoint
   - callbacks/early_stopping: early_stopping
 
-  - override hydra/launcher: local
+  - override hydra/launcher: strand_single
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
