@@ -38,4 +38,5 @@ dependencies:
       - hydra-optuna-sweeper
       - hydra-submitit-launcher
       - torchdiffeq
-      - "git+https://github.com/m-dml/unet-pytorch.git"
+      - GitPython
+      - "git+https://codebase.helmholtz.cloud/m-dml/unet-pytorch.git"
