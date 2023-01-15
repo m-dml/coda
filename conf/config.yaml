@@ -1,7 +1,7 @@
 defaults:
   - base_config
-#  - /hydra/callbacks:
-#      - log_git_hash
+  - /hydra/callbacks:
+      - log_git_hash
   - model: l96_base
   - da_encoder: unet_2d_1d
   - datamodule: l96_observations

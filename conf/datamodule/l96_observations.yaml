@@ -2,7 +2,7 @@ defaults:
   - l96_datamodule
   - _self_
 path: /home/vadim/Dev/hidden-process-learning/data/l96-1-65402354.pkl
-chunk_size: 10
+chunk_size: 25
 window: [15, 15]
 training_split: 0.8
 shuffle_train: true

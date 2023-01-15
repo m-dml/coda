@@ -35,7 +35,6 @@ def main(cfg: omegaconf.DictConfig):
         if "tensorboard" in str(this_logger):
             set_tb_logger(this_logger)
 
-
     lit_model: pl.LightningModule = hydra.utils.instantiate(
         cfg.lightning_module,
         model=cfg.model,
@@ -49,7 +48,6 @@ def main(cfg: omegaconf.DictConfig):
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
-
 
     log.info("Logging hparams to tensorboard")
     hydra_params = log_hyperparameters(config=cfg, model=lit_model)
