@@ -16,7 +16,7 @@ random_seed: 101
 output_dir_base_path: "/gpfs/work/zinchenk/hpl/lorenz96_logs/data_assimilation/"
 
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-65402354.pkl"
+  path: "/gpfs/home/zinchenk/dev/hidden-process-learning/data/l96-1-65402354.pkl"
   chunk_size: 25
   window: [15, 15]
   training_split: 0.8
