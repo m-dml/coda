@@ -30,9 +30,13 @@ lightning_module:
   alpha: 1.25
 
 trainer:
-  max_epochs: 100
+  max_epochs: 500
   devices: 1
 
 logger:
   tensorboard:
     default_hp_metric: false # important to be False, when we want to use own hp_metrics
+
+callbacks:
+  early_stopping:
+    patience: 10
