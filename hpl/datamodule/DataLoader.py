@@ -44,6 +44,14 @@ def slice_and_patch(data: torch.Tensor, start: int, end: int):
     return torch.concat(parts, dim=0)
 
 
+def pack_feed_forward_input(
+        data: torch.Tensor, mask: torch.Tensor, index: int, window: (int, int)
+):
+    _data = slice_and_patch(data, index-window[0], index+window[1])
+    _mask = slice_and_patch(mask, index-window[0], index+window[1])
+    return torch.stack((_data, _mask), dim=0)
+
+
 class L96Dataset(Dataset):
     """Basic Lorenz96 Dataset for Data Assimilation problem
     Args:
@@ -79,11 +87,6 @@ class L96Dataset(Dataset):
     def __len__(self):
         return len(self.sampling_indexes)
 
-    def prepare_feed_forward_input(self, index: int):
-        data = slice_and_patch(self.data, index-self.window[0], index+self.window[1])
-        mask = slice_and_patch(self.data, index-self.window[0], index+self.window[1])
-        return torch.stack((data, mask), dim=0)
-
     def prepare_observations(self, left: int, right: int):
         data = slice_and_patch(self.data, left, right+1)
         mask = slice_and_patch(self.mask, left, right+1)
@@ -96,9 +99,32 @@ class L96Dataset(Dataset):
         """
         index = self.sampling_indexes[item]
         left, right = self.ics_chunks[index]
-        return (self.prepare_feed_forward_input(left),
-                self.prepare_feed_forward_input(right),
+        return (pack_feed_forward_input(self.data, self.mask, left, self.window),
+                pack_feed_forward_input(self.data, self.mask, right, self.window),
                 self.prepare_observations(left, right))
+
+
+class L96InferenceDataset(Dataset):
+
+    def __init__(
+            self,
+            data: torch.Tensor,
+            mask: torch.tensor,
+            window_size: (int, int),
+    ):
+        if data.shape != mask.shape:
+            raise ValueError("data and mask must have the same shape")
+        self.data = data
+        self.mask = mask
+        self.window = window_size
+        self.sampling_indexes = torch.arange(len(self.data))
+
+    def __len__(self):
+        return len(self.sampling_indexes)
+
+    def __getitem__(self, item):
+        index = self.sampling_indexes[item]
+        return pack_feed_forward_input(self.data, self.mask, index, self.window)
 
 
 class L96DataModule(pl.LightningModule):

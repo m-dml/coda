@@ -18,6 +18,6 @@ class EarlyStoppingCallback:
     _target_: str = "pytorch_lightning.callbacks.EarlyStopping"
     monitor: str = "TotalLoss/Validation"
     min_delta: float = 0.00
-    patience: int = 999999  # set default arbitrarily high, so it won't be triggered accidentally.
+    patience: int = 5  # set default arbitrarily high, so it won't be triggered accidentally.
     verbose: bool = True
     mode: str = "min"
