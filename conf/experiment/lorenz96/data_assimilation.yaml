@@ -31,6 +31,7 @@ lightning_module:
 
 trainer:
   max_epochs: 100
+  devices: 1
 
 logger:
   tensorboard:
