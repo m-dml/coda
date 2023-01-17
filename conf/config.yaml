@@ -18,7 +18,7 @@ defaults:
 
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
-output_dir_base_path: "/home/vadim/Dev/hidden-process-learning/outputs"
+output_dir_base_path: "/gpfs/work/zinchenk/hpl/lorenz96_logs/data_assimilation/"
 
 logger:
   tensorboard:
