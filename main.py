@@ -40,6 +40,7 @@ def main(cfg: omegaconf.DictConfig):
         model=cfg.model,
         encoder=cfg.da_encoder,
         optimizer=cfg.optimizer,
+        loss=cfg.loss,
     )
 
     callbacks: list = []
