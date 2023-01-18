@@ -13,6 +13,25 @@ class BaseLossDA(nn.Module):
         return ((y - x)**2 * m).sum() / m.sum()
 
 
+class StrongConstraintLoss(BaseLossDA):
+    """ Strong Constraint 4DVar loss
+    Implementation of 4DVar objective function to train models consistent
+    with observations
+    """
+    def __init__(self):
+        super().__init__()
+
+    def __call__(
+            self,
+            target_and_mask: torch.Tensor,
+            rollout: torch.Tensor,
+    ):
+        mask = target_and_mask[:, 1, ...]
+        target = target_and_mask[:, 0, ...]
+        loss = self.masked_mse(rollout, target, mask)
+        return loss
+
+
 class WeakConstraintLoss(BaseLossDA):
     """Weak Constraint 4DVar loss
     Implementation of 4DVar objective function to train models consistent

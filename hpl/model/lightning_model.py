@@ -17,7 +17,7 @@ class LightningModel(pl.LightningModule):
             optimizer: DictConfig,
             rollout_length: int,
             time_step: float,
-            alpha: float,
+            loss: DictConfig,
     ):
         super().__init__()
         self.model: nn.Module | BaseSimulator = hydra.utils.instantiate(model)
@@ -26,7 +26,10 @@ class LightningModel(pl.LightningModule):
 
         self.rollout_length = rollout_length
         self.time_step = time_step
-        self.loss_func = WeakConstraintLoss()
+        self.loss_func = hydra.utils.instantiate(loss)
+        if isinstance(self.loss_func, WeakConstraintLoss):
+            self.use_model_loss = True
+        self.use_model_loss = False
 
     def configure_optimizers(self) -> Any:
         params = [*self.encoder.parameters()]
@@ -55,17 +58,25 @@ class LightningModel(pl.LightningModule):
     def training_step(self, batch, batch_index):
         _, _, observations = batch
         left_ics, right_ics, rollout = self._do_step(batch)
-        loss = self.loss_func(observations, rollout, right_ics)
-        self.log("TotalLoss/Training", loss)
-        self.log("DataLoss/Training", self.loss_func.data_loss)
-        self.log("ModelLoss/Training", self.loss_func.model_loss)
+        if self.use_model_loss:
+            loss = self.loss_func(observations, rollout, right_ics)
+            self.log("TotalLoss/Training", loss)
+            self.log("DataLoss/Training", self.loss_func.data_loss)
+            self.log("ModelLoss/Training", self.loss_func.model_loss)
+        else:
+            loss = self.loss_func(observations, rollout)
+            self.log("TotalLoss/Training", loss)
         return loss
 
     def validation_step(self, batch, batch_index):
         _, _, observations = batch
         left_ics, right_ics, rollout = self._do_step(batch)
-        loss = self.loss_func(observations, rollout, right_ics)
-        self.log("TotalLoss/Validation", loss)
-        self.log("DataLoss/Validation", self.loss_func.data_loss)
-        self.log("ModelLoss/Validation", self.loss_func.model_loss)
+        if self.use_model_loss:
+            loss = self.loss_func(observations, rollout, right_ics)
+            self.log("TotalLoss/Validation", loss)
+            self.log("DataLoss/Validation", self.loss_func.data_loss)
+            self.log("ModelLoss/Validation", self.loss_func.model_loss)
+        else:
+            loss = self.loss_func(observations, rollout)
+            self.log("TotalLoss/Validation", loss)
         return loss

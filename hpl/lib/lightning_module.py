@@ -11,4 +11,4 @@ class LitModule:
     encoder: Any = None
     rollout_length: int = 5
     time_step: float = 0.01
-    alpha: float = 1.25
+    loss: Any = None

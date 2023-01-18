@@ -4,4 +4,3 @@ defaults:
 
 rollout_length: 25
 time_step: 0.01
-alpha: 1.25

@@ -2,6 +2,7 @@
 defaults:
   - override /model: l96_base
   - override /da_encoder: unet_2d_1d
+  - override /loss: strong_4dvar
   - override /datamodule: l96_observations
   - override /lightning_module: default
   - override /optimizer: adam
@@ -27,7 +28,6 @@ datamodule:
 lightning_module:
   rollout_length: 25
   time_step: 0.01
-  alpha: 1.25
 
 trainer:
   max_epochs: 500

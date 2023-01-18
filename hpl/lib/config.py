@@ -11,6 +11,7 @@ from hpl.lib.callbacks import CheckpointCallback, EarlyStoppingCallback
 from hpl.lib.optimizer import Adam
 from hpl.lib.datamodule import L96DataModule
 from hpl.lib.trainer import Trainer
+from hpl.lib.loss import WeakConstraintLoss, StrongConstraintLoss
 
 
 def register_configs() -> None:
@@ -25,6 +26,10 @@ def register_configs() -> None:
 
     # lightning module:
     cs.store(name="base_lightning_module", node=LitModule, group="lightning_module")
+
+    # loss
+    cs.store(name="weak_4dvar", node=WeakConstraintLoss, group="loss")
+    cs.store(name="strong_4dvar", node=StrongConstraintLoss, group="loss")
 
     # optimizer
     optimizer_group = "optimizer"
@@ -43,10 +48,6 @@ def register_configs() -> None:
     cs.store(name="model_checkpoint", node=CheckpointCallback, group="callbacks/checkpoint")
     cs.store(name="early_stopping", node=EarlyStoppingCallback, group="callbacks/early_stopping")
 
-    # optimizer:
-    optimizer_group = "optimizer"
-    cs.store(name="adam", node=Adam, group=optimizer_group)
-
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
 
@@ -58,6 +59,7 @@ class Config:
 
     model: Any = MISSING
     da_encoder: Any = MISSING
+    loss: Any = MISSING
     lightning_module: Any = MISSING
     optimizer: Any = MISSING
 
