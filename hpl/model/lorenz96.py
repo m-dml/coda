@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Union
 
 import hydra
 import torch
@@ -13,7 +14,7 @@ class Lorenz96One(nn.Module):
         f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
     """
 
-    def __init__(self, f: float | torch.Tensor | nn.Parameter = 8):
+    def __init__(self, f: Union[float, torch.Tensor, nn.Parameter] = 8):
         super().__init__()
         self.f = f
 
@@ -25,7 +26,7 @@ class Lorenz96One(nn.Module):
 
     def forward(
         self,
-        t: float | torch.Tensor | None,
+        t: Union[float, torch.Tensor, None],
         x: torch.Tensor,
     ) -> torch.Tensor:
         dx = torch.empty_like(x)
@@ -49,10 +50,10 @@ class Lorenz96Two(torch.nn.Module):
 
     def __init__(
         self,
-        f: float | torch.Tensor | nn.Parameter = 10,
-        b: float | torch.Tensor | nn.Parameter = 10,
-        c: float | torch.Tensor | nn.Parameter = 1,
-        h: float | torch.Tensor | nn.Parameter = 10,
+        f: Union[float, torch.Tensor, nn.Parameter] = 10,
+        b: Union[float, torch.Tensor, nn.Parameter] = 10,
+        c: Union[float, torch.Tensor, nn.Parameter] = 1,
+        h: Union[float, torch.Tensor, nn.Parameter] = 10,
     ):
         super().__init__()
         self.f = f
@@ -69,7 +70,7 @@ class Lorenz96Two(torch.nn.Module):
 
     def forward(
         self,
-        t: float | torch.Tensor | None,
+        t: Union[float, torch.Tensor, None],
         ics: (torch.Tensor, torch.Tensor),
     ) -> (torch.Tensor, torch.Tensor):
         x, y = ics
@@ -128,8 +129,8 @@ class L96SimulatorNN(BaseSimulator):
 
     def __init__(
         self,
-        f: float | torch.Tensor | nn.Parameter = 8,
-        network: DictConfig | nn.Module | None = None,
+        f: Union[float, torch.Tensor, nn.Parameter] = 8,
+        network: Union[DictConfig, nn.Module, None] = None,
         method: str = "rk4",
         options: dict = None,
     ):
@@ -137,7 +138,7 @@ class L96SimulatorNN(BaseSimulator):
         self.f = f
         self.model = Lorenz96One(f=f)
         if network is None or isinstance(network, nn.Module):
-            self.network: nn.Module | None = network
+            self.network: Union[nn.Module, None] = network
         elif isinstance(network, DictConfig):
             self.network: nn.Module = hydra.utils.instantiate(network)
 
@@ -164,10 +165,10 @@ class L96Simulator(BaseSimulator):
 
     def __init__(
         self,
-        f: float | torch.Tensor | nn.Parameter = 10,
-        b: float | torch.Tensor | nn.Parameter = 10,
-        c: float | torch.Tensor | nn.Parameter = 1,
-        h: float | torch.Tensor | nn.Parameter = 10,
+        f: Union[float, torch.Tensor, nn.Parameter] = 10,
+        b: Union[float, torch.Tensor, nn.Parameter] = 10,
+        c: Union[float, torch.Tensor, nn.Parameter] = 1,
+        h: Union[float, torch.Tensor, nn.Parameter] = 10,
         method: str = "rk4",
         options: dict = None,
     ):
