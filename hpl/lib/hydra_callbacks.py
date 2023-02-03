@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+
 import git
 from hydra.core.hydra_config import HydraConfig
 from hydra.experimental.callback import Callback

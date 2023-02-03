@@ -1,6 +1,7 @@
 import logging
-from omegaconf import DictConfig
+
 import pytorch_lightning as pl
+from omegaconf import DictConfig
 
 
 def get_logger(name=__name__, level="INFO") -> logging.Logger:

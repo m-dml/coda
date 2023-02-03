@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from typing import Any
+
 from hydra.conf import ConfigStore, MISSING
 
-from hpl.lib.model import Lorenz96Base
-from hpl.lib.da_encoder import Unet
-from hpl.lib.lightning_module import LitModule
-
-from hpl.lib.logger import TensorBoardLogger
 from hpl.lib.callbacks import CheckpointCallback, EarlyStoppingCallback
-from hpl.lib.optimizer import Adam
+from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule
+from hpl.lib.lightning_module import LitModule
+from hpl.lib.logger import TensorBoardLogger
+from hpl.lib.loss import StrongConstraintLoss, WeakConstraintLoss
+from hpl.lib.model import Lorenz96Base
+from hpl.lib.optimizer import Adam
 from hpl.lib.trainer import Trainer
-from hpl.lib.loss import WeakConstraintLoss, StrongConstraintLoss
 
 
 def register_configs() -> None:

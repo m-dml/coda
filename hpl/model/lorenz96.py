@@ -1,17 +1,18 @@
+from abc import abstractmethod
+
+import hydra
 import torch
 import torch.nn as nn
-from typing import Iterable, Dict, List, Tuple, Any
-from torchdiffeq import odeint, odeint_adjoint
 from omegaconf import DictConfig
-import hydra
-from abc import abstractmethod
+from torchdiffeq import odeint
 
 
 class Lorenz96One(nn.Module):
     """Lorenz' 96 one level tendencies
-        Args:
-            f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
+    Args:
+        f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
     """
+
     def __init__(self, f: float | torch.Tensor | nn.Parameter = 8):
         super().__init__()
         self.f = f
@@ -23,9 +24,9 @@ class Lorenz96One(nn.Module):
         return str(self)
 
     def forward(
-            self,
-            t: float | torch.Tensor | None,
-            x: torch.Tensor,
+        self,
+        t: float | torch.Tensor | None,
+        x: torch.Tensor,
     ) -> torch.Tensor:
         dx = torch.empty_like(x)
         # edge cases
@@ -39,18 +40,20 @@ class Lorenz96One(nn.Module):
 
 class Lorenz96Two(torch.nn.Module):
     """Lorenz' 96 two levels tendencies
-        Args:
-            f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
-            b: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-            c: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-            h: (float | torch.Tensor | nn.Parameter): = coupling parameter of Lorenz'96 model
+    Args:
+        f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
+        b: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
+        c: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
+        h: (float | torch.Tensor | nn.Parameter): = coupling parameter of Lorenz'96 model
     """
-    def __init__(self,
-                 f: float | torch.Tensor | nn.Parameter = 10,
-                 b: float | torch.Tensor | nn.Parameter = 10,
-                 c: float | torch.Tensor | nn.Parameter = 1,
-                 h: float | torch.Tensor | nn.Parameter = 10,
-                 ):
+
+    def __init__(
+        self,
+        f: float | torch.Tensor | nn.Parameter = 10,
+        b: float | torch.Tensor | nn.Parameter = 10,
+        c: float | torch.Tensor | nn.Parameter = 1,
+        h: float | torch.Tensor | nn.Parameter = 10,
+    ):
         super().__init__()
         self.f = f
         self.b = b
@@ -65,9 +68,9 @@ class Lorenz96Two(torch.nn.Module):
         return str(self)
 
     def forward(
-            self,
-            t: float | torch.Tensor | None,
-            ics:(torch.Tensor, torch.Tensor),
+        self,
+        t: float | torch.Tensor | None,
+        ics: (torch.Tensor, torch.Tensor),
     ) -> (torch.Tensor, torch.Tensor):
         x, y = ics
         j = y.size(-1)
@@ -79,41 +82,42 @@ class Lorenz96Two(torch.nn.Module):
         dy[..., -2] = self.c * (self.b * y[..., -1] * (y[..., -3] - y[..., 0]) - y[..., -2] + self.h * x[:] / j)
         dy[..., -3] = self.c * (self.b * y[..., -2] * (y[..., -4] - y[..., -1]) - y[..., -2] + self.h * x[:] / j)
         # the rest
-        dy[..., 1:-2] = self.c * (self.b * y[..., 2:-1] * (y[..., 0:-3] - y[..., 3:]) - y[..., 1:-2] + self.h * x[..., None] / j)
+        dy[..., 1:-2] = self.c * (
+            self.b * y[..., 2:-1] * (y[..., 0:-3] - y[..., 3:]) - y[..., 1:-2] + self.h * x[..., None] / j
+        )
 
         dx = self.model_x.forward(t, x) - self.h * self.c * y[..., :].mean()
         return dx, dy
 
 
 class BaseSimulator(nn.Module):
-    """ Fully-Differentiable Abstract Simulator
-     Use differentiable solvers from torchdiffeq.
-     see https://github.com/rtqichen/torchdiffeq
+    """Fully-Differentiable Abstract Simulator Use differentiable solvers from torchdiffeq. see
+    https://github.com/rtqichen/torchdiffeq.
 
-     Args:
-        method (str): name of method from torchdiffeq
-        options (Dict): solver parameters
-     """
+    Args:
+       method (str): name of method from torchdiffeq
+       options (Dict): solver parameters
+    """
+
     def __init__(
-            self,
-            method: str,
-            options: Dict = None,
+        self,
+        method: str,
+        options: dict = None,
     ):
         super().__init__()
         self.method = method
         self.options = options
 
-    def integrate(self, t: torch.Tensor, ics: Tuple[torch.Tensor]):
+    def integrate(self, t: torch.Tensor, ics: tuple[torch.Tensor]):
         return odeint(self, ics, t, method=self.method, options=self.options)
 
     @abstractmethod
-    def forward(self, t: torch.Tensor, ics: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
         pass
 
 
 class L96SimulatorNN(BaseSimulator):
-    """ 1 level Lorenz' 96 simulator
-    This simulator can be parametrized and trained.
+    """1 level Lorenz' 96 simulator This simulator can be parametrized and trained.
 
     Args:
         f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
@@ -121,12 +125,13 @@ class L96SimulatorNN(BaseSimulator):
         method (str): name of method from torchdiffeq
         options (dict): solver parameters
     """
+
     def __init__(
-            self,
-            f: float | torch.Tensor | nn.Parameter = 8,
-            network: DictConfig | nn.Module | None = None,
-            method: str = "rk4",
-            options: Dict = None,
+        self,
+        f: float | torch.Tensor | nn.Parameter = 8,
+        network: DictConfig | nn.Module | None = None,
+        method: str = "rk4",
+        options: dict = None,
     ):
         super().__init__(method, options)
         self.f = f
@@ -136,7 +141,7 @@ class L96SimulatorNN(BaseSimulator):
         elif isinstance(network, DictConfig):
             self.network: nn.Module = hydra.utils.instantiate(network)
 
-    def forward(self, t: torch.Tensor, ics: Tuple[torch.Tensor]):
+    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]):
         x = ics[0]
         dx = torch.empty_like(x)
         dx = self.model.forward(t, x)
@@ -146,25 +151,25 @@ class L96SimulatorNN(BaseSimulator):
 
 
 class L96Simulator(BaseSimulator):
-    """ Lorenz' 96 simulator
-        This simulator can be parametrized and trained.
+    """Lorenz' 96 simulator This simulator can be parametrized and trained.
 
-        Args:
-            f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
-            b: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-            c: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-            h: (float | torch.Tensor | nn.Parameter): = coupling parameter of Lorenz'96 model
-            method (str): name of method from torchdiffeq
-            options (dict): solver parameters
+    Args:
+        f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
+        b: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
+        c: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
+        h: (float | torch.Tensor | nn.Parameter): = coupling parameter of Lorenz'96 model
+        method (str): name of method from torchdiffeq
+        options (dict): solver parameters
     """
+
     def __init__(
-            self,
-            f: float | torch.Tensor | nn.Parameter = 10,
-            b: float | torch.Tensor | nn.Parameter = 10,
-            c: float | torch.Tensor | nn.Parameter = 1,
-            h: float | torch.Tensor | nn.Parameter = 10,
-            method: str = "rk4",
-            options: Dict = None,
+        self,
+        f: float | torch.Tensor | nn.Parameter = 10,
+        b: float | torch.Tensor | nn.Parameter = 10,
+        c: float | torch.Tensor | nn.Parameter = 1,
+        h: float | torch.Tensor | nn.Parameter = 10,
+        method: str = "rk4",
+        options: dict = None,
     ):
         super().__init__(method, options)
         self.f = f
@@ -173,7 +178,7 @@ class L96Simulator(BaseSimulator):
         self.h = h
         self.model = Lorenz96Two(f, b, c, h)
 
-    def forward(self, t: torch.Tensor, ics: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
         diff = [torch.empty_like(el) for el in ics]
         diff = self.model.forward(t, ics)
         return tuple(diff)

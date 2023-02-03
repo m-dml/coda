@@ -1,12 +1,14 @@
-import numpy as np
-import torch
-from torch.utils.data import Dataset, DataLoader
-import pytorch_lightning as pl
 import pickle
+from typing import Union
+
+import numpy as np
+import pytorch_lightning as pl
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 
 def preprocess_data(data: torch.Tensor):
-    """ Preprocess observations
+    """Preprocess observations
     Args:
         data (torch.Tensor): masked observations by nan values
 
@@ -21,7 +23,7 @@ def preprocess_data(data: torch.Tensor):
 
 
 def slice_and_patch(data: torch.Tensor, start: int, end: int):
-    """ Slice data and patch it with zeros if indexes are out of bounds
+    """Slice data and patch it with zeros if indexes are out of bounds
     Args:
         data (torch.Tensor): data to slice with time dimension in the beginning
         start (int): start index of slice
@@ -44,11 +46,9 @@ def slice_and_patch(data: torch.Tensor, start: int, end: int):
     return torch.concat(parts, dim=0)
 
 
-def pack_feed_forward_input(
-        data: torch.Tensor, mask: torch.Tensor, index: int, window: (int, int)
-):
-    _data = slice_and_patch(data, index-window[0], index+window[1])
-    _mask = slice_and_patch(mask, index-window[0], index+window[1])
+def pack_feed_forward_input(data: torch.Tensor, mask: torch.Tensor, index: int, window: (int, int)):
+    _data = slice_and_patch(data, index - window[0], index + window[1])
+    _mask = slice_and_patch(mask, index - window[0], index + window[1])
     return torch.stack((_data, _mask), dim=0)
 
 
@@ -60,12 +60,13 @@ class L96Dataset(Dataset):
         chunk_size (int): number of time-steps between two initial conditions
         window_size (int, int): number of time-steps used for feed forward path
     """
+
     def __init__(
-            self,
-            data: torch.Tensor,
-            mask: torch.tensor,
-            chunk_size: int,
-            window_size: (int, int),
+        self,
+        data: torch.Tensor,
+        mask: torch.tensor,
+        chunk_size: int,
+        window_size: (int, int),
     ):
         if data.shape != mask.shape:
             raise ValueError("data and mask must have the same shape")
@@ -88,29 +89,30 @@ class L96Dataset(Dataset):
         return len(self.sampling_indexes)
 
     def prepare_observations(self, left: int, right: int):
-        data = slice_and_patch(self.data, left, right+1)
-        mask = slice_and_patch(self.mask, left, right+1)
+        data = slice_and_patch(self.data, left, right + 1)
+        mask = slice_and_patch(self.mask, left, right + 1)
         return torch.stack((data, mask), dim=0)
 
     def __getitem__(self, item):
-        """
-        Returns (torch.Tensor, torch.Tensor):
-            feed forward input [CH, T, X] and chunk of observations [T, X]
+        """Returns (torch.Tensor, torch.Tensor):
+
+        feed forward input [CH, T, X] and chunk of observations [T, X]
         """
         index = self.sampling_indexes[item]
         left, right = self.ics_chunks[index]
-        return (pack_feed_forward_input(self.data, self.mask, left, self.window),
-                pack_feed_forward_input(self.data, self.mask, right, self.window),
-                self.prepare_observations(left, right))
+        return (
+            pack_feed_forward_input(self.data, self.mask, left, self.window),
+            pack_feed_forward_input(self.data, self.mask, right, self.window),
+            self.prepare_observations(left, right),
+        )
 
 
 class L96InferenceDataset(Dataset):
-
     def __init__(
-            self,
-            data: torch.Tensor,
-            mask: torch.tensor,
-            window_size: (int, int),
+        self,
+        data: torch.Tensor,
+        mask: torch.tensor,
+        window_size: (int, int),
     ):
         if data.shape != mask.shape:
             raise ValueError("data and mask must have the same shape")
@@ -138,17 +140,18 @@ class L96DataModule(pl.LightningModule):
         num_workers (int): number of DataLoader workers
         pin_memory (bool): weather to pin memory
     """
+
     def __init__(
-            self,
-            path: str,
-            chunk_size: int,
-            window: (int, int),
-            training_split: float = 1.0,
-            shuffle_train: bool = True,
-            shuffle_valid: bool = False,
-            batch_size: int = 1,
-            num_workers: int = 0,
-            pin_memory: bool = False,
+        self,
+        path: str,
+        chunk_size: int,
+        window: (int, int),
+        training_split: float = 1.0,
+        shuffle_train: bool = True,
+        shuffle_valid: bool = False,
+        batch_size: int = 1,
+        num_workers: int = 0,
+        pin_memory: bool = False,
     ):
         super().__init__()
         self.path = path
@@ -165,13 +168,13 @@ class L96DataModule(pl.LightningModule):
 
     @staticmethod
     def _load_observations(path: str):
-        with open(path, 'rb') as file:
+        with open(path, "rb") as file:
             data: dict = pickle.load(file)
         x: torch.Tensor = data["x_obs"]
         x, mask = preprocess_data(x)
         return x, mask
 
-    def setup(self, stage: str = "training"):
+    def setup(self, **kwargs):
         x, mask = self._load_observations(self.path)
         if self.training_split == 1:
             self.train = L96Dataset(x, mask, self.chunk_size, self.window)
@@ -189,7 +192,7 @@ class L96DataModule(pl.LightningModule):
             pin_memory=self.pin_memory,
         )
 
-    def val_dataloader(self) -> DataLoader | None:
+    def val_dataloader(self) -> Union[DataLoader, None]:
         if hasattr(self, "valid"):
             return DataLoader(
                 self.valid,

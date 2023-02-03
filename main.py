@@ -1,19 +1,17 @@
 import hydra
-import omegaconf
 import numpy as np
-import torch.nn as nn
+import omegaconf
 import pytorch_lightning as pl
 import torch.random
 
-from hpl.utils import get_logger, log_hyperparameters
 from hpl.lib.config import register_configs
+from hpl.utils import get_logger, log_hyperparameters
 from hpl.utils.tb_logging_handler import set_tb_logger
-
 
 register_configs()
 
 
-@hydra.main(config_path='conf', config_name='config.yaml', version_base="1.2.0")
+@hydra.main(config_path="conf", config_name="config.yaml", version_base="1.2.0")
 def main(cfg: omegaconf.DictConfig):
     log = get_logger()
     log.info(f"Hydra version: {hydra.__version__}")
@@ -70,5 +68,5 @@ def main(cfg: omegaconf.DictConfig):
     log.info("Training finished")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
