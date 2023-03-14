@@ -41,9 +41,6 @@ def main(cfg: DictConfig):
 
         datamodule = init_datamodule(cfg, console_logger)
 
-        if cfg.lightning_trainer.auto_lr_find:
-            trainer.tune(model=lightning_module, datamodule=datamodule)
-
         console_logger.info("Training...")
         trainer.fit(model=lightning_module, datamodule=datamodule)
         console_logger.info("Training finished")

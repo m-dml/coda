@@ -129,13 +129,17 @@ class L96SimulatorNN(BaseSimulator):
 
     def __init__(
         self,
-        f: Union[float, torch.Tensor, nn.Parameter] = 8,
+        f: Union[float, torch.Tensor, nn.Parameter] = None,
         network: Union[DictConfig, nn.Module, None] = None,
         method: str = "rk4",
         options: dict = None,
     ):
         super().__init__(method, options)
+        if f is None:
+            f = torch.randint(4, 14, size=(1,)).float()
+            f = torch.nn.Parameter(f)
         self.f = f
+
         self.model = Lorenz96One(f=f)
         if network is None or isinstance(network, nn.Module):
             self.network: Union[nn.Module, None] = network
