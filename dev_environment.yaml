@@ -32,6 +32,7 @@ dependencies:
   - pylint
   - sphinx
   - setuptools_scm
+  - onnx
   - pip:
       - onnxruntime-gpu
       - torch-tb-profiler

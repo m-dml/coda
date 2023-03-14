@@ -15,14 +15,13 @@ def preprocess_data(data: torch.Tensor):
     Returns (torch.Tensor):
         extract mask from observations
     """
-    mask = torch.full(data.size(), 1)
-    masked_indexes = np.isnan(data)
-    mask[masked_indexes] = 0
-    data[masked_indexes] = 0
+    masked = torch.from_numpy(np.isnan(data.numpy()))
+    data = torch.masked_fill(data, masked, 0)
+    mask = torch.logical_not(masked)
     return data, mask
 
 
-def slice_and_patch(data: torch.Tensor, start: int, end: int):
+def slice_and_patch(data: torch.Tensor, start: int, end: int, use_bool: bool = False):
     """Slice data and patch it with zeros if indexes are out of bounds
     Args:
         data (torch.Tensor): data to slice with time dimension in the beginning
@@ -36,19 +35,21 @@ def slice_and_patch(data: torch.Tensor, start: int, end: int):
     parts = []
     if start < 0:
         size[0] = abs(start)
-        parts.append(torch.zeros(size))
+        patch = torch.full(size, False) if use_bool else torch.zeros(size)
+        parts.append(patch)
         start = 0
     parts.append(data[start:end])
     if end > data.size(0):
         size[0] = end - data.size(0)
-        parts.append(torch.zeros(size))
-
+        patch = torch.full(size, False) if use_bool else torch.zeros(size)
+        parts.append(patch)
     return torch.concat(parts, dim=0)
 
 
 def pack_feed_forward_input(data: torch.Tensor, mask: torch.Tensor, index: int, window: (int, int)):
     _data = slice_and_patch(data, index - window[0], index + window[1])
-    _mask = slice_and_patch(mask, index - window[0], index + window[1])
+    _mask = slice_and_patch(mask, index - window[0], index + window[1], use_bool=True)
+    _mask = _mask.float()
     return torch.stack((_data, _mask), dim=0)
 
 
@@ -88,23 +89,23 @@ class L96Dataset(Dataset):
     def __len__(self):
         return len(self.sampling_indexes)
 
-    def prepare_observations(self, left: int, right: int):
-        data = slice_and_patch(self.data, left, right + 1)
-        mask = slice_and_patch(self.mask, left, right + 1)
-        return torch.stack((data, mask), dim=0)
-
-    def __getitem__(self, item):
+    def __getitem__(self, index: int):
         """Returns (torch.Tensor, torch.Tensor):
 
         feed forward input [CH, T, X] and chunk of observations [T, X]
         """
-        index = self.sampling_indexes[item]
-        left, right = self.ics_chunks[index]
-        return (
-            pack_feed_forward_input(self.data, self.mask, left, self.window),
-            pack_feed_forward_input(self.data, self.mask, right, self.window),
-            self.prepare_observations(left, right),
-        )
+        i = self.sampling_indexes[index]
+        left, right = self.ics_chunks[i]
+        observations_data = slice_and_patch(self.data, left, right + 1)
+        observations_mask = slice_and_patch(self.mask, left, right + 1)
+
+        item = {
+            "feedforward_left": pack_feed_forward_input(self.data, self.mask, left, self.window),
+            "feedforward_right": pack_feed_forward_input(self.data, self.mask, right, self.window),
+            "observations_data": observations_data,
+            "observations_mask": observations_mask,
+        }
+        return item
 
 
 class L96InferenceDataset(Dataset):
