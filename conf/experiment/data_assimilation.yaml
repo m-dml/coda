@@ -4,7 +4,7 @@ defaults:
   - override /assimilation_network: unet_2d_1d
   - override /loss: 4dvar
   - override /datamodule: l96_observations
-  - override /lightning_module: default
+  - override /lightning_module: data_assimilation_module
   - override /optimizer: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_logger/tensorboard: tensorboard_logger_base
@@ -42,7 +42,6 @@ lightning_module:
 lightning_trainer:
   max_epochs: 100
   devices: 1
-#  auto_lr_find: true
 
 lightning_logger:
   tensorboard:

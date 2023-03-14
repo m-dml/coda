@@ -6,7 +6,7 @@ from mdml_tools.utils import add_hydra_models_to_config_store
 
 from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule
-from hpl.lib.lightning_module import LitModule
+from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import Lorenz96Base
 
@@ -27,7 +27,8 @@ def register_configs() -> None:
     cs.store(name="unet", node=Unet, group="assimilation_network")
 
     # lightning module:
-    cs.store(name="base_lightning_module", node=LitModule, group="lightning_module")
+    cs.store(name="data_assimilation_module", node=DataAssimilationModule, group="lightning_module")
+    cs.store(name="parameter_tuning_module", node=ParameterTuningModule, group="lightning_module")
 
     # datamodule
     cs.store(name="l96_datamodule", node=L96DataModule, group="datamodule")
