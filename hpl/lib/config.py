@@ -2,51 +2,35 @@ from dataclasses import dataclass
 from typing import Any
 
 from hydra.conf import ConfigStore, MISSING
+from mdml_tools.utils import add_hydra_models_to_config_store
 
-from hpl.lib.callbacks import CheckpointCallback, EarlyStoppingCallback
 from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule
 from hpl.lib.lightning_module import LitModule
-from hpl.lib.logger import TensorBoardLogger
-from hpl.lib.loss import StrongConstraintLoss, WeakConstraintLoss
+from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import Lorenz96Base
-from hpl.lib.optimizer import Adam
-from hpl.lib.trainer import Trainer
 
 
 def register_configs() -> None:
     cs = ConfigStore.instance()
+    # add hydra models from mdml_tools
+    add_hydra_models_to_config_store(cs)
+
+    # loss:
+    cs.store(name="4dvar", node=Four4DVarLoss, group="loss")
 
     # model:
     model_group = "model"
     cs.store(name="l96_base", node=Lorenz96Base, group=model_group)
 
     # encoder:
-    cs.store(name="unet", node=Unet, group="da_encoder")
+    cs.store(name="unet", node=Unet, group="assimilation_network")
 
     # lightning module:
     cs.store(name="base_lightning_module", node=LitModule, group="lightning_module")
 
-    # loss
-    cs.store(name="weak_4dvar", node=WeakConstraintLoss, group="loss")
-    cs.store(name="strong_4dvar", node=StrongConstraintLoss, group="loss")
-
-    # optimizer
-    optimizer_group = "optimizer"
-    cs.store(name="adam", node=Adam, group=optimizer_group)
-
     # datamodule
     cs.store(name="l96_datamodule", node=L96DataModule, group="datamodule")
-
-    # trainer
-    cs.store(name="base_trainer", node=Trainer, group="trainer")
-
-    # logger:
-    cs.store(name="tensorboard", node=TensorBoardLogger, group="logger/tensorboard")
-
-    # callbacks:
-    cs.store(name="model_checkpoint", node=CheckpointCallback, group="callbacks/checkpoint")
-    cs.store(name="early_stopping", node=EarlyStoppingCallback, group="callbacks/early_stopping")
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
@@ -55,15 +39,16 @@ def register_configs() -> None:
 @dataclass
 class Config:
     output_dir_base_path: str = MISSING
+    print_config: bool = True
     random_seed: int = 101
 
     model: Any = MISSING
-    da_encoder: Any = MISSING
+    assimilation_network: Any = MISSING
     loss: Any = MISSING
     lightning_module: Any = MISSING
     optimizer: Any = MISSING
 
     datamodule: Any = MISSING
-    trainer: Trainer = MISSING
-    logger: Any = MISSING
-    callbacks: Any = MISSING
+    lightning_trainer: Any = MISSING
+    lightning_logger: Any = MISSING
+    lightning_callback: Any = None

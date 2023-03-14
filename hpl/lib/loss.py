@@ -1,12 +1,9 @@
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass
-class WeakConstraintLoss:
-    _target_: str = "hpl.utils.Loss4DVar.WeakConstraintLoss"
-    alpha: int = 1
-
-
-@dataclass
-class StrongConstraintLoss:
-    _target_: str = "hpl.utils.Loss4DVar.StrongConstraintLoss"
+class Four4DVarLoss:
+    _target_: str = "hpl.utils.Loss4DVar.Four4DVarLoss"
+    use_model_term: bool = True
+    alpha: Union[float, None] = None

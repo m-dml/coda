@@ -4,3 +4,4 @@ defaults:
 
 rollout_length: 25
 time_step: 0.01
+save_onnx_model: false

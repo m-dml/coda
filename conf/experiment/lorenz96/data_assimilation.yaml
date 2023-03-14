@@ -4,9 +4,9 @@ defaults:
   - override /da_encoder: unet_2d_1d
   - override /loss: strong_4dvar
   - override /datamodule: l96_observations
-  - override /lightning_module: default
+  - override /lightning_module: default.yaml.yaml
   - override /optimizer: adam
-  - override /trainer: default
+  - override /trainer: default.yaml.yaml
   - override /logger/tensorboard: tensorboard
   - override /callbacks/checkpoint: model_checkpoint
   - override /callbacks/early_stopping: early_stopping
