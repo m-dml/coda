@@ -25,12 +25,15 @@ model:
 
 datamodule:
   path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-31639964.pkl"
-  chunk_size: 25
-  window: [15, 15]
   training_split: 1
   shuffle_train: true
   shuffle_valid: false
+  batch_size: 1
   num_workers: 32
+  dataset:
+    chunk_size: 25
+    window_past_size: 15
+    window_future_size: 15
 
 lightning_module:
   rollout_length: 25

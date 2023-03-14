@@ -4,6 +4,8 @@ from typing import Union
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from hydra.utils import instantiate
+from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -54,12 +56,17 @@ def pack_feed_forward_input(data: torch.Tensor, mask: torch.Tensor, index: int, 
 
 
 class L96Dataset(Dataset):
-    """Basic Lorenz96 Dataset for Data Assimilation problem
+    """Basic Lorenz96 Dataset for training Data Assimilation network or/and parametrization.
+
+    Dataset samples two feed-forward passes and chunk of observations.
+
     Args:
-        data (data: torch.Tensor): observational data on L96 system
-        mask (data: torch.Tensor): observational mask
-        chunk_size (int): number of time-steps between two initial conditions
-        window_size (int, int): number of time-steps used for feed forward path
+        data (torch.Tensor): observational data on L96 system [Time, Space].
+        mask (torch.Tensor): observational mask [Time, Space];
+            tensor of boolean where False states for masked value.
+        chunk_size (int): number of time-steps between two initial conditions.
+        window_past_size (int): number of time-steps from past used to forward pass.
+        window_future_size (int) number of time-steps from future used to forward pass.
     """
 
     def __init__(
@@ -67,14 +74,15 @@ class L96Dataset(Dataset):
         data: torch.Tensor,
         mask: torch.tensor,
         chunk_size: int,
-        window_size: (int, int),
+        window_past_size: int,
+        window_future_size: int,
     ):
         if data.shape != mask.shape:
             raise ValueError("data and mask must have the same shape")
         self.data = data
         self.mask = mask
         self.chunk_size = chunk_size
-        self.window = window_size
+        self.window: tuple[int, int] = (window_past_size, window_future_size)
 
         ics_indexes = torch.arange(0, len(data) - chunk_size + 1)
         self.ics_chunks = torch.stack(
@@ -96,30 +104,41 @@ class L96Dataset(Dataset):
         """
         i = self.sampling_indexes[index]
         left, right = self.ics_chunks[i]
-        observations_data = slice_and_patch(self.data, left, right + 1)
-        observations_mask = slice_and_patch(self.mask, left, right + 1)
 
-        item = {
+        sample = {
             "feedforward_left": pack_feed_forward_input(self.data, self.mask, left, self.window),
             "feedforward_right": pack_feed_forward_input(self.data, self.mask, right, self.window),
-            "observations_data": observations_data,
-            "observations_mask": observations_mask,
+            "observations_data": slice_and_patch(self.data, left, right + 1),
+            "observations_mask": slice_and_patch(self.mask, left, right + 1),
         }
-        return item
+        return sample
 
 
 class L96InferenceDataset(Dataset):
+    """Inference Lorenz96 Dataset for evaluation Data Assimilation network.
+
+    Dataset samples feed-forward pass.
+
+     Args:
+         data (torch.Tensor): observational data on L96 system [Time, Space].
+         mask (torch.Tensor): observational mask [Time, Space];
+             tensor of boolean where False states for masked value.
+         window_past_size (int): number of time-steps from past used to forward pass.
+         window_future_size (int) number of time-steps from future used to forward pass.
+    """
+
     def __init__(
         self,
         data: torch.Tensor,
         mask: torch.tensor,
-        window_size: (int, int),
+        window_past_size: int,
+        window_future_size: int,
     ):
         if data.shape != mask.shape:
             raise ValueError("data and mask must have the same shape")
         self.data = data
         self.mask = mask
-        self.window = window_size
+        self.window: tuple[int, int] = (window_past_size, window_future_size)
         self.sampling_indexes = torch.arange(len(self.data))
 
     def __len__(self):
@@ -145,8 +164,7 @@ class L96DataModule(pl.LightningModule):
     def __init__(
         self,
         path: str,
-        chunk_size: int,
-        window: (int, int),
+        dataset: DictConfig,
         training_split: float = 1.0,
         shuffle_train: bool = True,
         shuffle_valid: bool = False,
@@ -156,8 +174,6 @@ class L96DataModule(pl.LightningModule):
     ):
         super().__init__()
         self.path = path
-        self.chunk_size = chunk_size
-        self.window = window
         if 0 > training_split > 1:
             raise ValueError("Training split should be in range from 0 to 1")
         self.training_split = training_split
@@ -166,6 +182,8 @@ class L96DataModule(pl.LightningModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
+
+        self.cfg_dataset = dataset
 
     @staticmethod
     def _load_observations(path: str):
@@ -178,11 +196,31 @@ class L96DataModule(pl.LightningModule):
     def setup(self, **kwargs):
         x, mask = self._load_observations(self.path)
         if self.training_split == 1:
-            self.train = L96Dataset(x, mask, self.chunk_size, self.window)
+            self.train = instantiate(self.cfg_dataset, data=x, mask=mask)
         else:
             train_split_end = int(self.training_split * len(x))
-            self.train = L96Dataset(x[:train_split_end], mask[:train_split_end], self.chunk_size, self.window)
-            self.valid = L96Dataset(x[train_split_end:], mask[train_split_end:], self.chunk_size, self.window)
+            self.train = instantiate(self.cfg_dataset, data=x[:train_split_end], mask=mask[:train_split_end])
+            self.valid = instantiate(self.cfg_dataset, data=x[train_split_end:], mask=mask[train_split_end:])
+
+    def coallate(self, batch: list[dict]) -> dict[str : torch.Tensor]:
+        dict_batch = {
+            "feedforward_left": list(),
+            "feedforward_right": list(),
+            "observations_data": list(),
+            "observations_mask": list(),
+        }
+        for batch_el in batch:
+            for key, value in batch_el.items():
+                if key in dict_batch.keys():
+                    dict_batch[key].append(value)
+                else:
+                    raise KeyError(f"Key '{key}' is not supported")
+        for key, value in dict_batch.items():
+            if len(value) == 0:
+                dict_batch[key] = None
+            else:
+                dict_batch[key] = torch.stack(value, dim=0)
+        return dict_batch
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
@@ -191,6 +229,7 @@ class L96DataModule(pl.LightningModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=self.coallate,
         )
 
     def val_dataloader(self) -> Union[DataLoader, None]:
@@ -201,5 +240,6 @@ class L96DataModule(pl.LightningModule):
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=self.pin_memory,
+                collate_fn=self.coallate,
             )
         return None
