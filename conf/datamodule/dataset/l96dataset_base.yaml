@@ -1,0 +1,4 @@
+_target_: hpl.datamodule.DataLoader.L96Dataset
+chunk_size: 25
+window_past_size: 15
+window_future_size: 15

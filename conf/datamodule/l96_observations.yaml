@@ -1,12 +1,11 @@
 defaults:
   - l96_datamodule
+  - dataset: l96dataset_base
   - _self_
 path: /gpfs/home/zinchenk/dev/hidden-process-learning/data/l96-1-65402354.pkl
-chunk_size: 25
-window: [15, 15]
 training_split: 0.8
 shuffle_train: true
 shuffle_valid: false
-batch_size: 1
+batch_size: 2
 num_workers: 0
 pin_memory: false

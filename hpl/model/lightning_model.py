@@ -1,4 +1,3 @@
-import os
 from typing import Any, Union
 
 import hydra
@@ -41,65 +40,48 @@ class LightningModel(pl.LightningModule):
         optimizer = hydra.utils.instantiate(self.cfg_optimizer, lr=self.learning_rate, params=params)
         return optimizer
 
-    def rollout(self, ics: tuple[torch.Tensor]) -> torch.Tensor:
+    def rollout(self, ic: torch.Tensor) -> torch.Tensor:
         if isinstance(self.model, BaseSimulator):
             t = torch.arange(0, self.rollout_length * self.time_step, self.time_step)
-            return self.model.integrate(t, ics).squeeze()
+            if ic.size(0) > 1:
+                rollouts = []
+                for the_ic in ic:
+                    the_rollout = self.model.integrate(t, the_ic).squeeze()
+                    rollouts.append(the_rollout)
+                return torch.stack(rollouts, dim=0)  # stack rollouts over batch dim
+            return self.model.integrate(t, ic).squeeze().unsqueeze(0)
+        else:
+            raise NotImplementedError("The model should be child of BaseSimulator")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.assimilation_network.forward(x)
 
-    def do_step(self, batch, stage: str = "Training"):
+    def do_step(self, batch: dict[str : torch.Tensor], stage: str = "Training") -> torch.Tensor:
         left_ff = batch["feedforward_left"]
         right_ff = batch["feedforward_right"]
         observations_data = batch["observations_data"]
         observations_mask = batch["observations_mask"]
-
-        if self.global_step < 1:
-            self.example_input_array = left_ff
 
         left_ics = self.forward(left_ff)
         right_ics = self.forward(right_ff)
         rollout = self.rollout(left_ics)
 
         if self.loss_func.use_model_term:
-            data_loss, model_loss, loss = self.loss_func(
-                [rollout, right_ics.squeeze()],
-                [observations_data, rollout[..., -1, :].squeeze()],
-                observations_mask,
+            loss_dict: dict = self.loss_func(
+                prediction=[rollout, rollout[:, -1, :].unsqueeze(1)],
+                target=[observations_data, right_ics],
+                mask=observations_mask,
             )
-            self.log(f"DataLoss/{stage}", data_loss)
-            self.log(f"ModelLoss/{stage}", model_loss)
         else:
-            loss = self.loss_func([rollout], observations_data, observations_mask)
-        self.log(f"TotalLoss/{stage}", loss)
-        return loss
+            loss_dict: dict = self.loss_func(rollout, observations_data, observations_mask)
+
+        for key, value in loss_dict.items():
+            if value is not None:
+                self.log(f"{key}/{stage}", value)
+        return loss_dict["TotalLoss"]
 
     def training_step(self, batch, **kwargs):
         return self.do_step(batch, "Training")
 
     def validation_step(self, batch, *args, **kwargs):
         return self.do_step(batch, "Validation")
-
-    def on_save_checkpoint(self, *args, **kwargs) -> None:
-        # save model to onnx:
-        if self.global_step > 0 and self.save_onnx_model:
-            folder = self.trainer.checkpoint_callback.dirpath
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            onnx_file = os.path.join(folder, f"danet_{self.global_step}.onnx")
-            torch.onnx.export(
-                model=self.assimilation_network.float(),
-                args=self.example_input_array,
-                f=onnx_file,
-                opset_version=17,
-                verbose=False,
-                export_params=True,
-                input_names=["input"],
-                output_names=["output"],
-                dynamic_axes={
-                    "input": {0: "batch_size"},
-                    "output": {0: "batch_size"},
-                },
-            )
-            self.console_logger.info(f"Model saved to {onnx_file}")
