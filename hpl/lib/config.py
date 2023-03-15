@@ -14,7 +14,10 @@ from hpl.lib.model import Lorenz96Base
 def register_configs() -> None:
     cs = ConfigStore.instance()
     # add hydra models from mdml_tools
-    add_hydra_models_to_config_store(cs)
+    rename_groups = {
+        "optimizer": ["optimizer_da", "optimizer_param"],
+    }
+    add_hydra_models_to_config_store(cs, rename_groups)
 
     # loss:
     cs.store(name="4dvar", node=Four4DVarLoss, group="loss")
@@ -47,7 +50,8 @@ class Config:
     assimilation_network: Any = MISSING
     loss: Any = MISSING
     lightning_module: Any = MISSING
-    optimizer: Any = MISSING
+    optimizer_da: Any = MISSING
+    optimizer_param: Any = None
 
     datamodule: Any = MISSING
     lightning_trainer: Any = MISSING
