@@ -5,7 +5,8 @@ defaults:
   - override /loss: 4dvar
   - override /datamodule: l96_observations
   - override /lightning_module: parameter_tuning_module
-  - override /optimizer: adam_base
+  - override /optimizer_da: adam_base
+  - override /optimizer_param: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_logger/tensorboard: tensorboard_logger_base
   - override /lightning_callback/checkpointing: checkpoint_callback_base
@@ -18,13 +19,13 @@ output_dir_base_path: "."
 
 loss:
   use_model_term: true
-  alpha: 1.0
+  alpha: 2.0
 
 model:
   f: null
 
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-31639964.pkl"
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-58486505.pkl"
   training_split: 1
   shuffle_train: true
   shuffle_valid: false

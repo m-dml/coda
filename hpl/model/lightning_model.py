@@ -75,12 +75,6 @@ class BaseLightningModel(pl.LightningModule):
                 self.log(f"{key}/{stage}", value)
         return loss_dict["TotalLoss"]
 
-    def training_step(self, batch, **kwargs):
-        return self.do_step(batch, "Training")
-
-    def validation_step(self, batch, *args, **kwargs):
-        return self.do_step(batch, "Validation")
-
 
 class DataAssimilationModule(BaseLightningModel):
     def __init__(
@@ -100,29 +94,49 @@ class DataAssimilationModule(BaseLightningModel):
         optimizer = hydra.utils.instantiate(self.cfg_optimizer, params=params)
         return optimizer
 
+    def training_step(self, batch, **kwargs):
+        return self.do_step(batch, "Training")
+
+    def validation_step(self, batch, *args, **kwargs):
+        return self.do_step(batch, "Validation")
+
 
 class ParameterTuningModule(BaseLightningModel):
     def __init__(
         self,
         model: DictConfig,
         assimilation_network: DictConfig,
-        optimizer: DictConfig,
+        optimizer_da: DictConfig,
+        optimizer_param: DictConfig,
         loss: DictConfig,
         rollout_length: int,
         time_step: int,
     ):
         super().__init__(model, assimilation_network, loss, rollout_length, time_step)
-        self.cfg_optimizer: DictConfig = optimizer
+        self.cfg_optimizer_da: DictConfig = optimizer_da
+        self.cfg_optimizer_param: DictConfig = optimizer_param
+        self.automatic_optimization = False
 
     def configure_optimizers(self) -> Any:
-        params = [*self.assimilation_network.parameters()] + [*self.model.parameters()]
-        optimizer = hydra.utils.instantiate(self.cfg_optimizer, params=params)
-        return optimizer
+        params_da = [*self.assimilation_network.parameters()]
+        optimizer_da = hydra.utils.instantiate(self.cfg_optimizer_da, params=params_da)
+        params_param = [*self.model.parameters()]
+        optimizer_param = hydra.utils.instantiate(self.cfg_optimizer_param, params=params_param)
+        return optimizer_da, optimizer_param
 
-    def training_step_end(self, *args, **kwargs):
+    def training_step(self, batch, **kwargs):
+        optimizers = self.optimizers()
+        loss = self.do_step(batch, "Training")
+        for optimizer in optimizers:
+            optimizer.zero_grad()
+        self.manual_backward(loss)
+        for optimizer in optimizers:
+            optimizer.step()
+
         free_parameter = self.model.f
         self.log("Parameter/Training", free_parameter)
 
-    def validation_step_end(self, *args, **kwargs):
+    def validation_step(self, batch, *args, **kwargs):
+        self.do_step(batch, "Validation")
         free_parameter = self.model.f
         self.log("Parameter/Validation", free_parameter)

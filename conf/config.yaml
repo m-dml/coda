@@ -6,8 +6,9 @@ defaults:
   - assimilation_network: unet_2d_1d
   - datamodule: l96_observations
   - loss: 4dvar
-  - lightning_module: default.yaml
-  - optimizer: adam_base
+  - lightning_module: data_assimilation_module
+  - optimizer_da: adam_base
+  - optimizer_param: null
   - lightning_trainer: trainer_base
   - lightning_logger/tensorboard: tensorboard_logger_base
   - lightning_callback/checkpointing: checkpoint_callback_base

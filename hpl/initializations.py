@@ -84,14 +84,24 @@ def init_lightning_module(cfg: DictConfig, console_logger: Logger = None) -> Lig
     """
     if console_logger:
         console_logger.info(f"Initializing lightning module <{cfg.lightning_module._target_}>")
+    if cfg.optimizer_param is None:
+        lightning_module: LightningModule = hydra.utils.instantiate(
+            cfg.lightning_module,
+            model=cfg.model,
+            assimilation_network=cfg.assimilation_network,
+            optimizer_da=cfg.optimizer_da,
+            loss=cfg.loss,
+        )
+    else:
+        lightning_module: LightningModule = hydra.utils.instantiate(
+            cfg.lightning_module,
+            model=cfg.model,
+            assimilation_network=cfg.assimilation_network,
+            optimizer_da=cfg.optimizer_da,
+            optimizer_param=cfg.optimizer_param,
+            loss=cfg.loss,
+        )
 
-    lightning_module: LightningModule = hydra.utils.instantiate(
-        cfg.lightning_module,
-        model=cfg.model,
-        assimilation_network=cfg.assimilation_network,
-        optimizer=cfg.optimizer,
-        loss=cfg.loss,
-    )
     return lightning_module
 
 
