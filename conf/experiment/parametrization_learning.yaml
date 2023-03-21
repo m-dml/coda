@@ -1,11 +1,12 @@
 # @package _global_
 defaults:
-  - override /model: l96_base
+  - override /model: l96_param
   - override /assimilation_network: unet_2d_1d
   - override /loss: 4dvar
   - override /datamodule: l96_observations
-  - override /lightning_module: data_assimilation_module
+  - override /lightning_module: parameter_tuning_module
   - override /optimizer/data_assimilation: adam_base
+  - override /optimizer/parametrization: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_logger/tensorboard: tensorboard_logger_base
   - override /lightning_callback/checkpointing: checkpoint_callback_base
@@ -20,15 +21,13 @@ loss:
   use_model_term: true
   alpha: 1.0
 
-model:
-  f: 8
-
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-31639964.pkl"
-  training_split: 1
+  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-58486505.pkl"
+  training_split: 0.7
   shuffle_train: true
   shuffle_valid: false
-  batch_size: 1
+  batch_size: 5
+  drop_last_batch: true
   num_workers: 32
   dataset:
     chunk_size: 25
@@ -42,6 +41,7 @@ lightning_module:
 lightning_trainer:
   max_epochs: 100
   devices: 1
+  detect_anomaly: true
 
 lightning_logger:
   tensorboard:
@@ -52,8 +52,8 @@ lightning_logger:
 lightning_callback:
   early_stopping:
     patience: 10
-    monitor: "TotalLoss/Training"
+    monitor: "TotalLoss/Validation"
     mode: "min"
   checkpointing:
-    monitor: "TotalLoss/Training"
+    monitor: "TotalLoss/Validation"
     save_top_k: 10

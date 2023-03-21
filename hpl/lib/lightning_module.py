@@ -11,6 +11,7 @@ class DataAssimilationModule:
     rollout_length: int = 5
     time_step: float = 0.01
     loss: Any = None
+    optimizer: Any = None
 
 
 @dataclass
@@ -22,3 +23,4 @@ class ParameterTuningModule:
     rollout_length: int = 5
     time_step: float = 0.01
     loss: Any = None
+    optimizer: Any = None

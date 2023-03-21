@@ -169,6 +169,7 @@ class L96DataModule(pl.LightningModule):
         shuffle_train: bool = True,
         shuffle_valid: bool = False,
         batch_size: int = 1,
+        drop_last_batch: bool = False,
         num_workers: int = 0,
         pin_memory: bool = False,
     ):
@@ -180,6 +181,7 @@ class L96DataModule(pl.LightningModule):
         self.shuffle_train = shuffle_train
         self.shuffle_valid = shuffle_valid
         self.batch_size = batch_size
+        self.drop_last_batch = drop_last_batch
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
@@ -227,6 +229,7 @@ class L96DataModule(pl.LightningModule):
             self.train,
             shuffle=self.shuffle_train,
             batch_size=self.batch_size,
+            drop_last=self.drop_last_batch,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
             collate_fn=self.coallate,
@@ -238,6 +241,7 @@ class L96DataModule(pl.LightningModule):
                 self.valid,
                 shuffle=self.shuffle_valid,
                 batch_size=self.batch_size,
+                drop_last=self.drop_last_batch,
                 num_workers=self.num_workers,
                 pin_memory=self.pin_memory,
                 collate_fn=self.coallate,

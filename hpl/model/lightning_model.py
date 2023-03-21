@@ -41,13 +41,14 @@ class BaseLightningModel(pl.LightningModule):
     def rollout(self, ic: torch.Tensor) -> torch.Tensor:
         if isinstance(self.model, BaseSimulator):
             t = torch.arange(0, self.rollout_length * self.time_step, self.time_step)
-            if ic.size(0) > 1:
-                rollouts = []
-                for the_ic in ic:
-                    the_rollout = self.model.integrate(t, the_ic).squeeze()
-                    rollouts.append(the_rollout)
-                return torch.stack(rollouts, dim=0)  # stack rollouts over batch dim
-            return self.model.integrate(t, ic).squeeze().unsqueeze(0)
+            rollout = self.model.integrate(t, ic).squeeze()
+            if len(rollout.size()) == 2:
+                # add batch dimension if it's missing
+                rollout = rollout.unsqueeze(0)
+            else:
+                # swap batch and time dimension
+                rollout = torch.swapdims(rollout, 0, 1)
+            return rollout
         else:
             raise NotImplementedError("The model should be child of BaseSimulator class")
 
@@ -59,7 +60,7 @@ class BaseLightningModel(pl.LightningModule):
 
         left_ics = self.assimilation_network.forward(left_ff)
         right_ics = self.assimilation_network.forward(right_ff)
-        rollout = self.rollout(left_ics)
+        rollout = self.rollout(left_ics.squeeze(1))
 
         if self.loss_function.use_model_term:
             loss_dict: dict = self.loss_function(
@@ -87,7 +88,7 @@ class DataAssimilationModule(BaseLightningModel):
         time_step: int,
     ):
         super().__init__(model, assimilation_network, loss, rollout_length, time_step)
-        self.cfg_optimizer: DictConfig = optimizer
+        self.cfg_optimizer: DictConfig = optimizer.data_assimilation
 
     def configure_optimizers(self) -> Any:
         params = [*self.assimilation_network.parameters()]
@@ -113,8 +114,8 @@ class ParameterTuningModule(BaseLightningModel):
         time_step: int,
     ):
         super().__init__(model, assimilation_network, loss, rollout_length, time_step)
-        self.cfg_optimizer_da: DictConfig = optimizer_da
-        self.cfg_optimizer_param: DictConfig = optimizer_param
+        self.cfg_optimizer_da: DictConfig = optimizer.data_assimilation
+        self.cfg_optimizer_param: DictConfig = optimizer.parametrization
         self.automatic_optimization = False
 
     def configure_optimizers(self) -> Any:
