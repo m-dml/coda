@@ -53,8 +53,7 @@ class Config:
     assimilation_network: Any = MISSING
     loss: Any = MISSING
     lightning_module: Any = MISSING
-    optimizer_da: Any = MISSING
-    optimizer_param: Any = None
+    optimizer: Any = MISSING
 
     datamodule: Any = MISSING
     lightning_trainer: Any = MISSING
