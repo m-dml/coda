@@ -14,7 +14,7 @@ defaults:
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
 random_seed: 101
-output_dir_base_path: "."
+output_dir_base_path: "outputs"
 
 loss:
   use_model_term: true
@@ -28,7 +28,8 @@ datamodule:
   training_split: 1
   shuffle_train: true
   shuffle_valid: false
-  batch_size: 1
+  batch_size: 5
+  drop_last_batch: false
   num_workers: 32
   dataset:
     chunk_size: 25
@@ -40,20 +41,44 @@ lightning_module:
   time_step: 0.01
 
 lightning_trainer:
-  max_epochs: 100
+  max_epochs: 1
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 50
+  detect_anomaly: false
+  fast_dev_run: false
   devices: 1
 
 lightning_logger:
   tensorboard:
-    default_hp_metric: false # important to be False, when we want to use own hp_metrics
-    save_dir: "./logs/tensorboard"
+    default_hp_metric: false
+    log_graph: false
     name: null
+    prefix: ""
+    save_dir: "./logs/tensorboard"
+    sub_dir: null
+    version: null
 
 lightning_callback:
   early_stopping:
-    patience: 10
-    monitor: "TotalLoss/Training"
+    min_delta: 0.0
     mode: "min"
-  checkpointing:
     monitor: "TotalLoss/Training"
+    patience: 10
+    verbose: true
+  checkpointing:
+    dirpath: "./logs/checkpoints/"
+    filename: "{epoch:02d}"
+    mode: "min"
+    monitor: "TotalLoss/Training"
+    save_last: true
     save_top_k: 10
+    verbose: false
+
+hydra:
+  job:
+    chdir: true
+  sweep:
+    dir: ${output_dir_base_path}/data_assimilation/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${output_dir_base_path}/data_assimilation/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
