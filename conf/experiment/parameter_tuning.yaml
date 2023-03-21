@@ -5,8 +5,8 @@ defaults:
   - override /loss: 4dvar
   - override /datamodule: l96_observations
   - override /lightning_module: parameter_tuning_module
-  - override /optimizer_da: adam_base
-  - override /optimizer_param: adam_base
+  - override /optimizer/data_assimilation: adam_base
+  - override /optimizer/parametrization: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_logger/tensorboard: tensorboard_logger_base
   - override /lightning_callback/checkpointing: checkpoint_callback_base

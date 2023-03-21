@@ -11,7 +11,7 @@ from hpl.lib.config import register_configs
 register_configs()
 
 
-@hydra.main(config_path="conf", config_name="config.yaml", version_base="1.2.0")
+@hydra.main(config_path="conf", config_name="config.yaml", version_base="1.3")
 def main(cfg: DictConfig):
     if cfg.print_config:
         mdml_logging.print_config(cfg, resolve=True)

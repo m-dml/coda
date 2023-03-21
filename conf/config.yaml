@@ -7,8 +7,8 @@ defaults:
   - datamodule: l96_observations
   - loss: 4dvar
   - lightning_module: data_assimilation_module
-  - optimizer_da: adam_base
-  - optimizer_param: null
+  - optimizer/data_assimilation: adam_base
+  - optimizer/parametrization: null
   - lightning_trainer: trainer_base
   - lightning_logger/tensorboard: tensorboard_logger_base
   - lightning_callback/checkpointing: checkpoint_callback_base

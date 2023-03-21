@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Union
+from typing import Optional, Union
 
 import hydra
 import torch
@@ -109,11 +109,13 @@ class BaseSimulator(nn.Module):
         self.method = method
         self.options = options
 
-    def integrate(self, t: torch.Tensor, ics: tuple[torch.Tensor]):
-        return odeint(self, ics, t, method=self.method, options=self.options)
+    def integrate(self, t: torch.Tensor, x: Union[torch.Tensor, tuple[torch.Tensor]]):
+        return odeint(self, x, t, method=self.method, options=self.options)
 
     @abstractmethod
-    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
+    def forward(
+        self, t: torch.Tensor, x: Union[torch.Tensor, tuple[torch.Tensor]]
+    ) -> Union[torch.Tensor, tuple[torch.Tensor]]:
         pass
 
 
@@ -130,7 +132,7 @@ class L96SimulatorNN(BaseSimulator):
     def __init__(
         self,
         f: Union[float, torch.Tensor, nn.Parameter] = None,
-        network: Union[DictConfig, nn.Module, None] = None,
+        network: Optional[DictConfig] = None,
         method: str = "rk4",
         options: dict = None,
     ):
@@ -141,17 +143,15 @@ class L96SimulatorNN(BaseSimulator):
         self.f = f
 
         self.model = Lorenz96One(f=f)
-        if network is None or isinstance(network, nn.Module):
-            self.network: Union[nn.Module, None] = network
-        elif isinstance(network, DictConfig):
-            self.network: nn.Module = hydra.utils.instantiate(network)
 
-    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]):
-        x = ics[0]
-        dx = torch.empty_like(x)
+        if network:
+            network_nn: nn.Module = hydra.utils.instantiate(network)
+            self.add_module("parametrization", network_nn)
+
+    def forward(self, t: torch.Tensor, x: torch.Tensor):
         dx = self.model.forward(t, x)
-        if self.network:
-            dx += self.network.forward(x)
+        if hasattr(self, "parametrization"):
+            dx += self.parametrization.forward(x)
         return dx
 
 
@@ -183,7 +183,7 @@ class L96Simulator(BaseSimulator):
         self.h = h
         self.model = Lorenz96Two(f, b, c, h)
 
-    def forward(self, t: torch.Tensor, ics: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
-        diff = [torch.empty_like(el) for el in ics]
-        diff = self.model.forward(t, ics)
+    def forward(self, t: torch.Tensor, x: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
+        diff = [torch.empty_like(el) for el in x]
+        diff = self.model.forward(t, x)
         return tuple(diff)

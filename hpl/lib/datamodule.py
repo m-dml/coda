@@ -13,6 +13,7 @@ class L96DataModule:
     shuffle_train: bool = True
     shuffle_valid: bool = False
     batch_size: int = 1
+    drop_last_batch: bool = False
     num_workers: int = 0
     pin_memory: bool = False
     dataset: Any = None

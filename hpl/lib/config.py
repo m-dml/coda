@@ -15,7 +15,10 @@ def register_configs() -> None:
     cs = ConfigStore.instance()
     # add hydra models from mdml_tools
     rename_groups = {
-        "optimizer": ["optimizer_da", "optimizer_param"],
+        "optimizer": ["optimizer/data_assimilation", "optimizer/parametrization"],
+        "models": "model/network",
+        # model/network/fully_connected_model/fully_connected_model_base
+        # models/fully_connected_model
     }
     add_hydra_models_to_config_store(cs, rename_groups)
 
