@@ -127,9 +127,11 @@ class ParameterTuningModule(BaseLightningModel):
             optimizer.step()
 
         free_parameter = self.model.f
-        self.log("Parameter/Training", free_parameter)
+        if isinstance(free_parameter, nn.Parameter):
+            self.log("Parameter/Training", free_parameter)
 
     def validation_step(self, batch, *args, **kwargs):
         self.do_step(batch, "Validation")
         free_parameter = self.model.f
-        self.log("Parameter/Validation", free_parameter)
+        if isinstance(free_parameter, nn.Parameter):
+            self.log("Parameter/Validation", free_parameter)

@@ -3,19 +3,19 @@ name: hpl-torch
 channels:
   - conda-forge
   - pytorch
+  - nvidia
 
 dependencies:
   - python=3.9
-  #  - cudatoolkit=11.7
   - pip
-  #  - pytorch-cuda=11.7
+  - pytorch-cuda=11.7
   - pytorch>=2
   - pre-commit
   - black
   - isort
   - flake8
   - tensorboard
-  - torchvision>=0.14
+  - torchvision>=0.12
   - pytorch-lightning>=2
   - torchdiffeq
   - hydra-core=1.3
@@ -29,14 +29,10 @@ dependencies:
   - numpy
   - seaborn
   - pillow
-  - coverage
   - tqdm
   - pylint
-  - sphinx
   - setuptools_scm
-  - onnx
   - pip:
-      #      - onnxruntime-gpu
       - torch-tb-profiler
       - hydra-colorlog
       - hydra-submitit-launcher
