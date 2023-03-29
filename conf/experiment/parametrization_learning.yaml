@@ -4,47 +4,60 @@ defaults:
   - override /assimilation_network: unet_2d_1d
   - override /loss: 4dvar
   - override /datamodule: l96_observations
+  - override /datamodule/generator: lorenz96_one_level
   - override /lightning_module: parameter_tuning_module
   - override /optimizer/data_assimilation: adam_base
   - override /optimizer/parametrization: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_logger/tensorboard: tensorboard_logger_base
-  - override /lightning_callback/checkpointing: checkpoint_callback_base
-  - override /lightning_callback/early_stopping: early_stopping_callback_base
+  - override /lightning_callback/model_checkpoint: model_checkpoint_base
+  - override /lightning_callback/early_stopping: early_stopping_base
 
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
 random_seed: 101
-output_dir_base_path: "outputs"
+output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
+print_config: true
+debug: false
+rollout_size: 25
 
 loss:
   use_model_term: true
   alpha: 1.0
 
 datamodule:
-  path: "/home/vadim/Dev/hidden-process-learning/data/l96-1-58486505.pkl"
-  training_split: 0.7
+  path: null
+  generator:
+    f: 8
+    sigma: 0
+    missing: 0
+    random_seed: ${random_seed}
+  training_split: 0.75
   shuffle_train: true
   shuffle_valid: false
-  batch_size: 5
+  batch_size: 8
   drop_last_batch: true
   num_workers: 32
   dataset:
-    chunk_size: 25
+    chunk_size: ${rollout_size}
     window_past_size: 15
     window_future_size: 15
 
 lightning_module:
-  rollout_length: 25
+  rollout_length: ${rollout_size}
   time_step: 0.01
 
 lightning_trainer:
-  max_epochs: 1
+  max_epochs: 100
   check_val_every_n_epoch: 1
+  val_check_interval: null
+  limit_val_batches: null
+  num_sanity_val_steps: 1
   log_every_n_steps: 50
   detect_anomaly: false
   fast_dev_run: false
   devices: 1
+  deterministic: false
 
 lightning_logger:
   tensorboard:
@@ -63,7 +76,7 @@ lightning_callback:
     monitor: "TotalLoss/Validation"
     patience: 10
     verbose: true
-  checkpointing:
+  model_checkpoint:
     dirpath: "./logs/checkpoints/"
     filename: "{epoch:02d}"
     mode: "min"
@@ -71,6 +84,7 @@ lightning_callback:
     save_last: true
     save_top_k: 10
     verbose: false
+    save_on_train_epoch_end: true
 
 hydra:
   job:

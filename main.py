@@ -1,6 +1,7 @@
 import hydra
 import numpy as np
 import pytorch_lightning as pl
+import torch
 import torch.random
 from mdml_tools.utils import logging as mdml_logging
 from omegaconf import DictConfig
@@ -11,7 +12,7 @@ from hpl.lib.config import register_configs
 register_configs()
 
 
-@hydra.main(config_path="conf", config_name="config.yaml", version_base="1.3")
+@hydra.main(config_path="conf", config_name="config.yaml", version_base="1.2")
 def main(cfg: DictConfig):
     if cfg.print_config:
         mdml_logging.print_config(cfg, resolve=True)
@@ -30,7 +31,6 @@ def main(cfg: DictConfig):
         trainer = init_trainer(cfg, logger, callbacks, console_logger)
 
         lightning_module = init_lightning_module(cfg, console_logger)
-
         hydra_params = mdml_logging.get_hparams_from_hydra_config(config=cfg, model=lightning_module)
         for this_logger in logger:
             if "tensorboard" in str(this_logger):

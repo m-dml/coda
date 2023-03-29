@@ -18,7 +18,7 @@ def init_callbacks(cfg: DictConfig, console_logger: Logger = None) -> list[Callb
         list[Callback]: The list of initialized callbacks.
     """
     callbacks: list[Callback] = []
-    if "lightning_callback" in cfg:
+    if "lightning_callback" in cfg and cfg["lightning_callback"] is not None:
         for _, cb_conf in cfg["lightning_callback"].items():
             if "_target_" in cb_conf:
                 if console_logger:
@@ -65,6 +65,8 @@ def init_trainer(
     """
     if console_logger:
         console_logger.info(f"Instantiating lightning_trainer <{cfg.lightning_trainer._target_}>")
+    if len(callbacks) == 0:
+        callbacks = None
 
     trainer: Trainer = hydra.utils.instantiate(
         cfg.lightning_trainer, logger=logger, callbacks=callbacks, _convert_="partial"

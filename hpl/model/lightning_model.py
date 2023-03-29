@@ -41,14 +41,7 @@ class BaseLightningModel(pl.LightningModule):
     def rollout(self, ic: torch.Tensor) -> torch.Tensor:
         if isinstance(self.model, BaseSimulator):
             t = torch.arange(0, self.rollout_length * self.time_step, self.time_step)
-            rollout = self.model.integrate(t, ic).squeeze()
-            if len(rollout.size()) == 2:
-                # add batch dimension if it's missing
-                rollout = rollout.unsqueeze(0)
-            else:
-                # swap batch and time dimension
-                rollout = torch.swapdims(rollout, 0, 1)
-            return rollout
+            return self.model.integrate(t, ic)
         else:
             raise NotImplementedError("The model should be child of BaseSimulator class")
 

@@ -1,11 +1,13 @@
+import hashlib
 import pickle
 from typing import Union
 
+import hydra.utils
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -163,7 +165,6 @@ class L96DataModule(pl.LightningModule):
 
     def __init__(
         self,
-        path: str,
         dataset: DictConfig,
         training_split: float = 1.0,
         shuffle_train: bool = True,
@@ -172,9 +173,14 @@ class L96DataModule(pl.LightningModule):
         drop_last_batch: bool = False,
         num_workers: int = 0,
         pin_memory: bool = False,
+        path: str = None,
+        generator: DictConfig = None,
     ):
         super().__init__()
         self.path = path
+        self.generator = generator
+        if path is None and generator is None:
+            raise ValueError("chose generator or provide path to data")
         if 0 > training_split > 1:
             raise ValueError("Training split should be in range from 0 to 1")
         self.training_split = training_split
@@ -187,6 +193,24 @@ class L96DataModule(pl.LightningModule):
 
         self.cfg_dataset = dataset
 
+    def dict_to_hash(self, dictionary: dict):
+        dictionary = dictionary.copy()
+        for key, value in dictionary.items():
+            if isinstance(value, int):
+                dictionary[key] = float(value)
+        s = str(sorted(dictionary.items()))
+        hash_int = int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % (10**8)
+        return hash_int
+
+    def _generate_observations(self):
+        data: torch.Tensor = hydra.utils.call(self.generator)
+        data["generator"] = OmegaConf.to_container(self.generator, resolve=True)
+        hash_int = self.dict_to_hash(data["generator"])
+        with open(f"data_{hash_int}.pkl", "wb") as file:
+            pickle.dump(data, file)
+        x, mask = preprocess_data(data["x_obs"])
+        return x, mask
+
     @staticmethod
     def _load_observations(path: str):
         with open(path, "rb") as file:
@@ -196,7 +220,10 @@ class L96DataModule(pl.LightningModule):
         return x, mask
 
     def setup(self, **kwargs):
-        x, mask = self._load_observations(self.path)
+        if self.path:
+            x, mask = self._load_observations(self.path)
+        else:
+            x, mask = self._generate_observations()
         if self.training_split == 1:
             self.train = instantiate(self.cfg_dataset, data=x, mask=mask)
         else:
