@@ -5,7 +5,7 @@ from hydra.conf import ConfigStore, MISSING
 from mdml_tools.utils import add_hydra_models_to_config_store
 
 from hpl.lib.da_encoder import Unet
-from hpl.lib.datamodule import L96DataModule
+from hpl.lib.datamodule import L96DataModule, L96OneGenerator, L96TwoGenerator
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import Lorenz96Base
@@ -16,9 +16,7 @@ def register_configs() -> None:
     # add hydra models from mdml_tools
     rename_groups = {
         "optimizer": ["optimizer/data_assimilation", "optimizer/parametrization"],
-        "models": "model/network",
-        # model/network/fully_connected_model/fully_connected_model_base
-        # models/fully_connected_model
+        "model": "model/network",
     }
     add_hydra_models_to_config_store(cs, rename_groups)
 
@@ -38,6 +36,8 @@ def register_configs() -> None:
 
     # datamodule
     cs.store(name="l96_datamodule", node=L96DataModule, group="datamodule")
+    cs.store(name="lorenz96_one_level", node=L96OneGenerator, group="datamodule/generator")
+    cs.store(name="lorenz96_two_level", node=L96TwoGenerator, group="datamodule/generator")
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
@@ -48,6 +48,8 @@ class Config:
     output_dir_base_path: str = MISSING
     print_config: bool = True
     random_seed: int = 101
+    debug: bool = False
+    rollout_size: int = MISSING
 
     model: Any = MISSING
     assimilation_network: Any = MISSING

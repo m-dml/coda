@@ -5,14 +5,15 @@ defaults:
   - model: l96_base
   - assimilation_network: unet_2d_1d
   - datamodule: l96_observations
+  - datamodule/generator: null
   - loss: 4dvar
   - lightning_module: data_assimilation_module
   - optimizer/data_assimilation: adam_base
   - optimizer/parametrization: null
   - lightning_trainer: trainer_base
   - lightning_logger/tensorboard: tensorboard_logger_base
-  - lightning_callback/checkpointing: checkpoint_callback_base
-  - lightning_callback/early_stopping: early_stopping_callback_base
+  - lightning_callback/model_checkpoint: model_checkpoint_base
+  - lightning_callback/early_stopping: early_stopping_base
 
   - override hydra/launcher: local
   - override hydra/hydra_logging: colorlog
@@ -22,11 +23,8 @@ defaults:
 
 output_dir_base_path: "."
 print_config: true
-
-#lightning_logger:
-#  tensorboard:
-#    default_hp_metric: false # important to be False, when we want to use own hp_metrics
-#    save_dir: "."
+debug: false
+rollout_size: 10
 
 hydra:
   job:

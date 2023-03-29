@@ -110,7 +110,21 @@ class BaseSimulator(nn.Module):
         self.options = options
 
     def integrate(self, t: torch.Tensor, x: Union[torch.Tensor, tuple[torch.Tensor]]):
-        return odeint(self, x, t, method=self.method, options=self.options)
+        """Integration over time using chosen method
+        Args:
+            t (torch.Tensor): tensor with timepoints [Time]
+            x (torch.Tensor): initial conditions tensor [Batch, Space]
+
+        Returns (torch.Tensor): simulation or several of them [Batch, Time, Space]
+        """
+        rollout = odeint(self, x, t, method=self.method, options=self.options).squeeze()
+        if len(rollout.size()) == 2:
+            # add batch dimension if missing
+            rollout = rollout.unsqueeze(0)
+        else:
+            # swap time and batch dimensions
+            rollout = rollout.swapdims(0, 1)
+        return rollout
 
     @abstractmethod
     def forward(
@@ -119,12 +133,12 @@ class BaseSimulator(nn.Module):
         pass
 
 
-class L96SimulatorNN(BaseSimulator):
+class L96Simulator(BaseSimulator):
     """1 level Lorenz' 96 simulator This simulator can be parametrized and trained.
 
     Args:
         f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
-        network (DictConfig | nn.Module | None): network parametrization
+        network (DictConfig| None): network parametrization
         method (str): name of method from torchdiffeq
         options (dict): solver parameters
     """
@@ -137,13 +151,13 @@ class L96SimulatorNN(BaseSimulator):
         options: dict = None,
     ):
         super().__init__(method, options)
+        # generate random free parameter if not provided
         if f is None:
             f = torch.randint(4, 14, size=(1,)).float()
             f = torch.nn.Parameter(f)
         self.f = f
 
         self.model = Lorenz96One(f=f)
-
         if network:
             network_nn: nn.Module = hydra.utils.instantiate(network)
             self.add_module("parametrization", network_nn)
@@ -153,37 +167,3 @@ class L96SimulatorNN(BaseSimulator):
         if hasattr(self, "parametrization"):
             dx += self.parametrization.forward(x)
         return dx
-
-
-class L96Simulator(BaseSimulator):
-    """Lorenz' 96 simulator This simulator can be parametrized and trained.
-
-    Args:
-        f (float | torch.Tensor | nn.Parameter): free parameter of Lorenz'96 model
-        b: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-        c: (float | torch.Tensor | nn.Parameter): coupling parameter of Lorenz'96 model
-        h: (float | torch.Tensor | nn.Parameter): = coupling parameter of Lorenz'96 model
-        method (str): name of method from torchdiffeq
-        options (dict): solver parameters
-    """
-
-    def __init__(
-        self,
-        f: Union[float, torch.Tensor, nn.Parameter] = 10,
-        b: Union[float, torch.Tensor, nn.Parameter] = 10,
-        c: Union[float, torch.Tensor, nn.Parameter] = 1,
-        h: Union[float, torch.Tensor, nn.Parameter] = 10,
-        method: str = "rk4",
-        options: dict = None,
-    ):
-        super().__init__(method, options)
-        self.f = f
-        self.b = b
-        self.c = c
-        self.h = h
-        self.model = Lorenz96Two(f, b, c, h)
-
-    def forward(self, t: torch.Tensor, x: tuple[torch.Tensor]) -> tuple[torch.Tensor]:
-        diff = [torch.empty_like(el) for el in x]
-        diff = self.model.forward(t, x)
-        return tuple(diff)
