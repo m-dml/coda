@@ -1,14 +1,16 @@
 from dataclasses import dataclass
 from typing import Any
 
+from omegaconf import MISSING
+
 
 @dataclass
-class Lorenz96Base:
-    """Hydra config for Lorenz 96 model."""
+class L96Parametrized:
+    """Hydra config for Lorenz 96 simulator parametrized by Neural Network."""
 
-    _target_: str = "hpl.model.lorenz96.L96Simulator"
-    _recursive_: bool = False
-    f: Any = 8
-    network: Any = None
+    _target_: str = "hpl.simulator.lorenz96.L96Parametrized"
+    _recursive_: bool = True
+    forcing: Any = 8
+    parametrization: Any = MISSING
     method: str = "rk4"
     options: Any = None

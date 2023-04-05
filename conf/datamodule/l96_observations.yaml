@@ -1,11 +1,33 @@
 defaults:
-  - l96_datamodule
-  - dataset: l96dataset_base
+  - l96_datamodule_base
+  - dataset: l96_dataset_base
+  - simulator: l96_base
   - _self_
-path: /gpfs/home/zinchenk/dev/hidden-process-learning/data/l96-1-65402354.pkl
-training_split: 0.8
+
+dataset:
+  chunk_size: 25
+  window_past_size: 15
+  window_future_size: 15
+
+simulator:
+  simulator_type: "one_level"
+  forcing: 8.0
+
+x_grid_size: 40
+y_grid_size: 10
+time_step: 0.01
+n_integration_steps: 500
+n_spin_up_steps: 300
+additional_noise_mean: 0.0
+additional_noise_std: 0.0
+n_masked_per_time_step: 20
+mask_fill_value: 0.0
+save_training_data_dir: "data"
+load_training_data_dir: null
+train_validation_split: 1.0
 shuffle_train: true
 shuffle_valid: false
-batch_size: 2
-num_workers: 0
+batch_size: 1
+drop_last_batch: false
+num_workers: 20
 pin_memory: false

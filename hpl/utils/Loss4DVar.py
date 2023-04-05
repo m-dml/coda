@@ -8,7 +8,7 @@ class Four4DVarLoss:
 
     Args:
         use_model_term (bool): whether calculate missmatch between sub-windows
-        alpha (float): model error scaler is None by default
+        alpha (float): simulator error scaler is None by default
             use 1 / model_error_variance if alpha is not provided
     """
 

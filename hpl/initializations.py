@@ -88,7 +88,7 @@ def init_lightning_module(cfg: DictConfig, console_logger: Logger = None) -> Lig
         console_logger.info(f"Initializing lightning module <{cfg.lightning_module._target_}>")
     lightning_module: LightningModule = hydra.utils.instantiate(
         cfg.lightning_module,
-        model=cfg.model,
+        simulator=cfg.simulator,
         assimilation_network=cfg.assimilation_network,
         optimizer=cfg.optimizer,
         loss=cfg.loss,
@@ -108,7 +108,6 @@ def init_datamodule(cfg: DictConfig, console_logger: Logger = None) -> Lightning
     """
     if console_logger:
         console_logger.info(f"Initializing lightning module <{cfg.datamodule._target_}>")
-
     datamodule = hydra.utils.instantiate(cfg.datamodule)
     datamodule.setup()
     return datamodule

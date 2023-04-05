@@ -6,7 +6,7 @@ from typing import Any
 class DataAssimilationModule:
     _target_: str = "hpl.model.lightning_model.DataAssimilationModule"
     _recursive_: bool = False
-    model: Any = None
+    simulator: Any = None
     assimilation_network: Any = None
     rollout_length: int = 5
     time_step: float = 0.01
@@ -18,7 +18,7 @@ class DataAssimilationModule:
 class ParameterTuningModule:
     _target_: str = "hpl.model.lightning_model.ParameterTuningModule"
     _recursive_: bool = False
-    model: Any = None
+    simulator: Any = None
     assimilation_network: Any = None
     rollout_length: int = 5
     time_step: float = 0.01

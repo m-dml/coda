@@ -5,10 +5,10 @@ from hydra.conf import ConfigStore, MISSING
 from mdml_tools.utils import add_hydra_models_to_config_store
 
 from hpl.lib.da_encoder import Unet
-from hpl.lib.datamodule import L96DataModule, L96OneGenerator, L96TwoGenerator
+from hpl.lib.datamodule import L96DataModule, L96Dataset, L96InferenceDataset
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule
 from hpl.lib.loss import Four4DVarLoss
-from hpl.lib.model import Lorenz96Base
+from hpl.lib.model import L96Parametrized
 
 
 def register_configs() -> None:
@@ -16,16 +16,18 @@ def register_configs() -> None:
     # add hydra models from mdml_tools
     rename_groups = {
         "optimizer": ["optimizer/data_assimilation", "optimizer/parametrization"],
-        "model": "model/network",
+        "simulator": ["simulator", "datamodule/simulator"],
+        "model": "simulator/parametrization",
+        "activation": "simulator/parametrization/activation",
     }
     add_hydra_models_to_config_store(cs, rename_groups)
 
     # loss:
     cs.store(name="4dvar", node=Four4DVarLoss, group="loss")
 
-    # model:
-    model_group = "model"
-    cs.store(name="l96_base", node=Lorenz96Base, group=model_group)
+    # simulator:
+    model_group = "simulator"
+    cs.store(name="l96_parametrized_base", node=L96Parametrized, group=model_group)
 
     # encoder:
     cs.store(name="unet", node=Unet, group="assimilation_network")
@@ -34,10 +36,10 @@ def register_configs() -> None:
     cs.store(name="data_assimilation_module", node=DataAssimilationModule, group="lightning_module")
     cs.store(name="parameter_tuning_module", node=ParameterTuningModule, group="lightning_module")
 
-    # datamodule
-    cs.store(name="l96_datamodule", node=L96DataModule, group="datamodule")
-    cs.store(name="lorenz96_one_level", node=L96OneGenerator, group="datamodule/generator")
-    cs.store(name="lorenz96_two_level", node=L96TwoGenerator, group="datamodule/generator")
+    # datamodule:
+    cs.store(name="l96_datamodule_base", node=L96DataModule, group="datamodule")
+    cs.store(name="l96_dataset_base", node=L96Dataset, group="datamodule/dataset")
+    cs.store(name="l96_inference_dataset_base", node=L96InferenceDataset, group="datamodule/dataset")
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
@@ -51,7 +53,7 @@ class Config:
     debug: bool = False
     rollout_size: int = MISSING
 
-    model: Any = MISSING
+    simulator: Any = MISSING
     assimilation_network: Any = MISSING
     loss: Any = MISSING
     lightning_module: Any = MISSING

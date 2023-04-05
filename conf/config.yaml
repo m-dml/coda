@@ -2,10 +2,9 @@ defaults:
   - base_config
   - /hydra/callbacks:
       - log_git_hash
-  - model: l96_base
+  - simulator: l96_base
   - assimilation_network: unet_2d_1d
   - datamodule: l96_observations
-  - datamodule/generator: null
   - loss: 4dvar
   - lightning_module: data_assimilation_module
   - optimizer/data_assimilation: adam_base

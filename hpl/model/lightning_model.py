@@ -4,10 +4,9 @@ import hydra
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
+from mdml_tools.simulators.base import BaseSimulator
 from mdml_tools.utils.logging import get_logger
 from omegaconf import DictConfig
-
-from hpl.model.lorenz96 import BaseSimulator
 
 
 class BaseLightningModel(pl.LightningModule):
@@ -20,7 +19,7 @@ class BaseLightningModel(pl.LightningModule):
 
     def __init__(
         self,
-        model: DictConfig,
+        simulator: DictConfig,
         assimilation_network: DictConfig,
         loss: DictConfig,
         rollout_length: int,
@@ -28,8 +27,8 @@ class BaseLightningModel(pl.LightningModule):
     ):
         super().__init__()
         self.console_logger = get_logger(__name__)
-        self.console_logger.info(f"Instantiating model <{model._target_}>")
-        self.model: BaseSimulator = hydra.utils.instantiate(model)
+        self.console_logger.info(f"Instantiating simulator <{simulator._target_}>")
+        self.simulator: BaseSimulator = hydra.utils.instantiate(simulator)
         self.console_logger.info(f"Instantiating assimilation network <{assimilation_network._target_}>")
         self.assimilation_network: nn.Module = hydra.utils.instantiate(assimilation_network)
         self.console_logger.info(f"Instantiating loss function <{loss._target_}>")
@@ -39,11 +38,11 @@ class BaseLightningModel(pl.LightningModule):
         self.time_step = time_step
 
     def rollout(self, ic: torch.Tensor) -> torch.Tensor:
-        if isinstance(self.model, BaseSimulator):
+        if isinstance(self.simulator, BaseSimulator):
             t = torch.arange(0, self.rollout_length * self.time_step, self.time_step)
-            return self.model.integrate(t, ic)
+            return self.simulator.integrate(t, ic)
         else:
-            raise NotImplementedError("The model should be child of BaseSimulator class")
+            raise NotImplementedError("The simulator should be child of BaseSimulator class")
 
     def do_step(self, batch: dict[str : torch.Tensor], stage: str = "Training") -> torch.Tensor:
         left_ff = batch["feedforward_left"]
@@ -73,14 +72,14 @@ class BaseLightningModel(pl.LightningModule):
 class DataAssimilationModule(BaseLightningModel):
     def __init__(
         self,
-        model: DictConfig,
+        simulator: DictConfig,
         assimilation_network: DictConfig,
         optimizer: DictConfig,
         loss: DictConfig,
         rollout_length: int,
         time_step: int,
     ):
-        super().__init__(model, assimilation_network, loss, rollout_length, time_step)
+        super().__init__(simulator, assimilation_network, loss, rollout_length, time_step)
         self.cfg_optimizer: DictConfig = optimizer.data_assimilation
 
     def configure_optimizers(self) -> Any:
@@ -95,43 +94,43 @@ class DataAssimilationModule(BaseLightningModel):
         return self.do_step(batch, "Validation")
 
 
-class ParameterTuningModule(BaseLightningModel):
-    def __init__(
-        self,
-        model: DictConfig,
-        assimilation_network: DictConfig,
-        optimizer: DictConfig,
-        loss: DictConfig,
-        rollout_length: int,
-        time_step: int,
-    ):
-        super().__init__(model, assimilation_network, loss, rollout_length, time_step)
-        self.cfg_optimizer_da: DictConfig = optimizer.data_assimilation
-        self.cfg_optimizer_param: DictConfig = optimizer.parametrization
-        self.automatic_optimization = False
-
-    def configure_optimizers(self) -> Any:
-        params_da = [*self.assimilation_network.parameters()]
-        optimizer_da = hydra.utils.instantiate(self.cfg_optimizer_da, params=params_da)
-        params_param = [*self.model.parameters()]
-        optimizer_param = hydra.utils.instantiate(self.cfg_optimizer_param, params=params_param)
-        return optimizer_da, optimizer_param
-
-    def training_step(self, batch, **kwargs):
-        optimizers = self.optimizers()
-        loss = self.do_step(batch, "Training")
-        for optimizer in optimizers:
-            optimizer.zero_grad()
-        self.manual_backward(loss)
-        for optimizer in optimizers:
-            optimizer.step()
-
-        free_parameter = self.model.f
-        if isinstance(free_parameter, nn.Parameter):
-            self.log("Parameter/Training", free_parameter)
-
-    def validation_step(self, batch, *args, **kwargs):
-        self.do_step(batch, "Validation")
-        free_parameter = self.model.f
-        if isinstance(free_parameter, nn.Parameter):
-            self.log("Parameter/Validation", free_parameter)
+# class ParameterTuningModule(BaseLightningModel):
+#     def __init__(
+#         self,
+#         simulator: DictConfig,
+#         assimilation_network: DictConfig,
+#         optimizer: DictConfig,
+#         loss: DictConfig,
+#         rollout_length: int,
+#         time_step: int,
+#     ):
+#         super().__init__(simulator, assimilation_network, loss, rollout_length, time_step)
+#         self.cfg_optimizer_da: DictConfig = optimizer.data_assimilation
+#         self.cfg_optimizer_param: DictConfig = optimizer.parametrization
+#         self.automatic_optimization = False
+#
+#     def configure_optimizers(self) -> Any:
+#         params_da = [*self.assimilation_network.parameters()]
+#         optimizer_da = hydra.utils.instantiate(self.cfg_optimizer_da, params=params_da)
+#         params_param = [*self.simulator.parameters()]
+#         optimizer_param = hydra.utils.instantiate(self.cfg_optimizer_param, params=params_param)
+#         return optimizer_da, optimizer_param
+#
+#     def training_step(self, batch, **kwargs):
+#         optimizers = self.optimizers()
+#         loss = self.do_step(batch, "Training")
+#         for optimizer in optimizers:
+#             optimizer.zero_grad()
+#         self.manual_backward(loss)
+#         for optimizer in optimizers:
+#             optimizer.step()
+#
+#         free_parameter = self.simulator.f
+#         if isinstance(free_parameter, nn.Parameter):
+#             self.log("Parameter/Training", free_parameter)
+#
+#     def validation_step(self, batch, *args, **kwargs):
+#         self.do_step(batch, "Validation")
+#         free_parameter = self.simulator.f
+#         if isinstance(free_parameter, nn.Parameter):
+#             self.log("Parameter/Validation", free_parameter)

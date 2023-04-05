@@ -1,8 +1,0 @@
-defaults:
-  - l96_base
-  - network: fcnet
-  - _self_
-
-f: 8
-method: "rk4"
-options: null
