@@ -3,6 +3,7 @@ defaults:
   - /hydra/callbacks:
       - log_git_hash
   - simulator: l96_base
+  - simulator/parametrization: null
   - assimilation_network: unet_2d_1d
   - datamodule: l96_observations
   - loss: 4dvar

@@ -31,6 +31,12 @@ def main(cfg: DictConfig):
         trainer = init_trainer(cfg, logger, callbacks, console_logger)
 
         lightning_module = init_lightning_module(cfg, console_logger)
+
+        # load assimilation network from checkpoint if provided (used only in parametrization learning)
+        if cfg.assimilation_network_checkpoint:
+            console_logger.info("Loading assimilation network from checkpoint")
+            lightning_module.assimilation_network = torch.load(cfg.assimilation_network_checkpoint)
+
         hydra_params = mdml_logging.get_hparams_from_hydra_config(config=cfg, model=lightning_module)
         for this_logger in logger:
             if "tensorboard" in str(this_logger):

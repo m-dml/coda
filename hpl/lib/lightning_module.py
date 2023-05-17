@@ -24,3 +24,15 @@ class ParameterTuningModule:
     time_step: float = 0.01
     loss: Any = None
     optimizer: Any = None
+
+
+@dataclass
+class ParametrizationLearningModule:
+    _target_: str = "hpl.model.lightning_model.ParameterTuningModule"
+    _recursive_: bool = False
+    simulator: Any = None
+    assimilation_network: Any = None
+    rollout_length: int = 5
+    time_step: float = 0.01
+    loss: Any = None
+    optimizer: Any = None

@@ -13,12 +13,43 @@ defaults:
 
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
+# hyperparameters of the method
+rollout_size: 25
+integration_window: 500
+time_step: 0.01
+window_past_size: 15
+window_future_size: 15
+
 random_seed: 111
 #output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
 output_dir_base_path: "."
 print_config: true
 debug: false
-rollout_size: 25
+
+datamodule:
+  x_grid_size: 40
+  time_step: ${time_step}
+  n_integration_steps: ${integration_window}
+  additional_noise_mean: 0.0
+  additional_noise_std: 1.0
+  n_masked_per_time_step: 20
+  mask_fill_value: 0.0
+  save_training_data_dir: "data"
+  train_validation_split: 1.0
+  shuffle_train: true
+  shuffle_valid: false
+  batch_size: 1
+  drop_last_batch: false
+  num_workers: 20
+  pin_memory: false
+  dataset:
+    chunk_size: ${rollout_size}
+    window_past_size: ${window_past_size}
+    window_future_size: ${window_future_size}
+  simulator:
+    simulator_type: "one_level"
+    forcing: 8.0
+    method: "rk4"
 
 loss:
   use_model_term: true
@@ -27,13 +58,14 @@ loss:
 simulator:
   simulator_type: "one_level"
   forcing: 8
+  method: "rk4"
 
 lightning_module:
   rollout_length: ${rollout_size}
-  time_step: 0.01
+  time_step: ${time_step}
 
 lightning_trainer:
-  max_epochs: 100
+  max_epochs: 120
   check_val_every_n_epoch: null
   val_check_interval: null
   limit_val_batches: 0
@@ -63,7 +95,7 @@ lightning_callback:
     verbose: true
   model_checkpoint:
     dirpath: "./logs/checkpoints/"
-    filename: "{epoch:02d}"
+    filename: "best"
     mode: "min"
     monitor: "TotalLoss/Training"
     save_last: true

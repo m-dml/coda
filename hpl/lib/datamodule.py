@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 
 @dataclass
@@ -33,8 +33,8 @@ class L96DataModule:
     additional_noise_std: float = 0
     n_masked_per_time_step: int = 20
     mask_fill_value: Union[int, float] = 0
-    save_training_data_dir: Any = None
-    load_training_data_dir: Any = None
+    save_training_data_dir: Optional[str] = None
+    load_training_data_dir: Optional[str] = None
     train_validation_split: float = 0.75
     shuffle_train: bool = True
     shuffle_valid: bool = False

@@ -137,8 +137,8 @@ class L96InferenceDataset(Dataset):
     ):
         if data.shape != mask.shape:
             raise ValueError("data and mask must have the same shape")
-        self.data = data
-        self.mask = mask
+        self.data = data.squeeze()
+        self.mask = mask.squeeze()
         self.window: tuple[int, int] = (window_past_size, window_future_size)
         self.sampling_indexes = torch.arange(len(self.data))
 
@@ -151,7 +151,7 @@ class L96InferenceDataset(Dataset):
 
 
 class L96DataLoader(pl.LightningDataModule):
-    def __int__(
+    def __init__(
         self,
         dataset: DictConfig,
         simulator: DictConfig,
@@ -196,14 +196,13 @@ class L96DataLoader(pl.LightningDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
-    def setup(self, stage: str) -> None:
+    def setup(self, **kwargs) -> None:
         # load/generate training data
         if self.load_training_data_dir:
             data, mask = self.load_data()
         else:
             simulation = self.generate_data()
             data, mask = self.corrupt_data(simulation)
-
         if self.train_validation_split == 1:
             self.train = instantiate(self.dataset, data=data, mask=mask)
         else:
@@ -256,14 +255,14 @@ class L96DataLoader(pl.LightningDataModule):
     def load_data(self):
         observations = torch.load(os.path.join(self.load_training_data_dir, "x_observations.pt"))
         mask = torch.load(os.path.join(self.load_training_data_dir, "x_mask.pt"))
-
-        if mask.size(0) != 1 and observations.size(0) != 1:
-            raise ValueError("first dimension of observations and mask tensors must be equal to 1")
         if observations.size(1) != self.n_integration_steps and mask.size(1) != self.n_spin_up_steps:
             raise ValueError(f"time dimension doesn't match specified value: {self.n_integration_steps}")
         if observations.size(-1) != self.x_grid_size and mask.size(-1) != self.x_grid_size:
             raise ValueError(f"grid dimension doesn't match specified value: {self.x_grid_size}")
-        return observations.squeeze(), mask.squeeze()
+        if observations.size(0) == 1 and mask.size(0) == 1:
+            observations = observations.squeeze()
+            mask = mask.squeeze()
+        return observations, mask
 
     def generate_data(self):
         time_array = torch.arange(
@@ -283,14 +282,20 @@ class L96DataLoader(pl.LightningDataModule):
             x_data = self.simulator.integrate(time_array, x_init)
 
         if self.save_training_data_dir:
+            if not os.path.exists(self.save_training_data_dir):
+                os.makedirs(self.save_training_data_dir)
+            x_data = x_data[:, self.n_spin_up_steps :, :].squeeze()
             torch.save(x_data, os.path.join(self.save_training_data_dir, "x_true.pt"))
             torch.save(x_data, os.path.join(self.save_training_data_dir, "time_array.pt"))
-        return x_data[:, self.n_spin_up_steps :, :]
+        return x_data
 
     def corrupt_data(self, states: torch.Tensor):
         # additional noise
         noise = torch.normal(
-            mean=self.additional_noise_mean, std=self.additional_noise_std, size=states.size(), device="cpu"
+            mean=self.additional_noise_mean,
+            std=self.additional_noise_std,
+            size=states.size(),
+            device="cpu",
         )
         observations = states + noise
         # random mask
@@ -299,9 +304,9 @@ class L96DataLoader(pl.LightningDataModule):
         mask.scatter_(dim=-1, index=sample, value=True)
 
         observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
-        mask_binary = torch.logical_not(mask).float()
+        mask_inverse = torch.logical_not(mask)
         if self.save_training_data_dir:
             torch.save(noise, os.path.join(self.save_training_data_dir, "x_noise.pt"))
             torch.save(observations, os.path.join(self.save_training_data_dir, "x_observations.pt"))
-            torch.save(mask_binary, os.path.join(self.save_training_data_dir, "x_mask.pt"))
-        return observations, mask_binary
+            torch.save(mask_inverse, os.path.join(self.save_training_data_dir, "x_mask.pt"))
+        return observations, mask_inverse

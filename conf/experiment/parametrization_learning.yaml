@@ -1,11 +1,11 @@
 # @package _global_
 defaults:
-  - override /model: l96_param
+  - override /simulator: l96_parametrized_base
+  - override /simulator/parametrization: fcnet
   - override /assimilation_network: unet_2d_1d
   - override /loss: 4dvar
   - override /datamodule: l96_observations
-  - override /datamodule/generator: lorenz96_one_level
-  - override /lightning_module: parameter_tuning_module
+  - override /lightning_module: parametrization_learning_module
   - override /optimizer/data_assimilation: adam_base
   - override /optimizer/parametrization: adam_base
   - override /lightning_trainer: trainer_base
@@ -17,31 +17,24 @@ defaults:
 
 random_seed: 101
 output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
+assimilation_network_checkpoint: "/home/vadim/Dev/hidden-process-learning/outputs/data_assimilation/outputs/2023-05-15/12-17-30/encoder"
 print_config: true
 debug: false
-rollout_size: 25
+rollout_size: 2
+
+datamodule:
+  simulator:
+    simulator_type: "two_level"
+    forcing: 10
+  dataset:
+    chunk_size: ${rollout_size}
+
+simulator:
+  forcing: 10
 
 loss:
   use_model_term: true
   alpha: 1.0
-
-datamodule:
-  path: null
-  generator:
-    f: 8
-    sigma: 0
-    missing: 0
-    random_seed: ${random_seed}
-  training_split: 0.75
-  shuffle_train: true
-  shuffle_valid: false
-  batch_size: 8
-  drop_last_batch: true
-  num_workers: 32
-  dataset:
-    chunk_size: ${rollout_size}
-    window_past_size: 15
-    window_future_size: 15
 
 lightning_module:
   rollout_length: ${rollout_size}

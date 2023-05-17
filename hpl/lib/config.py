@@ -6,7 +6,7 @@ from mdml_tools.utils import add_hydra_models_to_config_store
 
 from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule, L96Dataset, L96InferenceDataset
-from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule
+from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule, ParametrizationLearningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import L96Parametrized
 
@@ -35,6 +35,7 @@ def register_configs() -> None:
     # lightning module:
     cs.store(name="data_assimilation_module", node=DataAssimilationModule, group="lightning_module")
     cs.store(name="parameter_tuning_module", node=ParameterTuningModule, group="lightning_module")
+    cs.store(name="parametrization_learning_module", node=ParametrizationLearningModule, group="lightning_module")
 
     # datamodule:
     cs.store(name="l96_datamodule_base", node=L96DataModule, group="datamodule")
@@ -52,11 +53,16 @@ class Config:
     random_seed: int = 101
     debug: bool = False
     rollout_size: int = MISSING
+    integration_window: int = MISSING
+    time_step: float = MISSING
+    window_past_size: int = MISSING
+    window_future_size: int = MISSING
 
     simulator: Any = MISSING
     assimilation_network: Any = MISSING
     loss: Any = MISSING
     lightning_module: Any = MISSING
+    assimilation_network_checkpoint: Any = None
     optimizer: Any = MISSING
 
     datamodule: Any = MISSING

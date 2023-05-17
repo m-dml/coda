@@ -1,10 +1,9 @@
 # @package _global_
 defaults:
-  - override /model: l96_base
+  - override /simulator: l96_base
   - override /assimilation_network: unet_2d_1d
   - override /loss: 4dvar
   - override /datamodule: l96_observations
-  - override /datamodule/generator: lorenz96_one_level
   - override /lightning_module: parameter_tuning_module
   - override /optimizer/data_assimilation: adam_base
   - override /optimizer/parametrization: adam_base
@@ -16,7 +15,8 @@ defaults:
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
 random_seed: 101
-output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
+output_dir_base_path: "."
+#output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
 print_config: true
 debug: false
 rollout_size: 25
@@ -25,26 +25,10 @@ loss:
   use_model_term: true
   alpha: 1.0
 
-model:
-  f: null
-
-datamodule:
-  path: null
-  generator:
-    f: 8
-    sigma: 0
-    missing: 0
-    random_seed: ${random_seed}
-  training_split: 1
-  shuffle_train: true
-  shuffle_valid: false
-  batch_size: 1
-  drop_last_batch: false
-  num_workers: 32
-  dataset:
-    chunk_size: ${rollout_size}
-    window_past_size: 15
-    window_future_size: 15
+simulator:
+  simulator_type: "one_level"
+  forcing: 8
+  method: "rk4"
 
 lightning_module:
   rollout_length: ${rollout_size}

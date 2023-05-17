@@ -8,7 +8,7 @@ from omegaconf import MISSING
 class L96Parametrized:
     """Hydra config for Lorenz 96 simulator parametrized by Neural Network."""
 
-    _target_: str = "hpl.simulator.lorenz96.L96Parametrized"
+    _target_: str = "hpl.model.lorenz96.L96Parametrized"
     _recursive_: bool = True
     forcing: Any = 8
     parametrization: Any = MISSING
