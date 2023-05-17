@@ -21,8 +21,7 @@ window_past_size: 15
 window_future_size: 15
 
 random_seed: 111
-#output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
-output_dir_base_path: "."
+output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
 print_config: true
 debug: false
 

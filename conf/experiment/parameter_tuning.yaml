@@ -15,8 +15,7 @@ defaults:
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
 random_seed: 101
-output_dir_base_path: "."
-#output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
+output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
 print_config: true
 debug: false
 rollout_size: 25
