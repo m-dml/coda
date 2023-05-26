@@ -14,11 +14,10 @@ class Four4DVarLoss:
 
     def __init__(
         self,
-        use_model_term: bool = False,
         alpha: float = None,
     ):
-        self.use_model_term = use_model_term
         self.alpha = alpha
+        self.use_model_term = True if alpha > 0 else False
         self.device = None
 
     def __call__(

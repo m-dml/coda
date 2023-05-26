@@ -15,25 +15,46 @@ defaults:
 
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
-random_seed: 101
 output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
-assimilation_network_checkpoint: "/home/vadim/Dev/hidden-process-learning/outputs/data_assimilation/outputs/2023-05-15/12-17-30/encoder"
-print_config: true
+print_config: false
 debug: false
-rollout_size: 2
+random_seed: 101
+
+assimilation_network_checkpoint: null
+dataset_size: 1200
+time_step: 0.01
+rollout_size: 25
+input_window_size: 25
 
 datamodule:
+  x_grid_size: 40
+  time_step: ${time_step}
+  n_integration_steps: ${dataset_size}
+  additional_noise_mean: 0.0
+  additional_noise_std: 1.0
+  n_masked_per_time_step: 30
+  mask_fill_value: 0.0
+  save_training_data_dir: "data"
+  train_validation_split: 0.7
+  shuffle_train: true
+  shuffle_valid: false
+  batch_size: 32
+  drop_last_batch: false
+  num_workers: 20
+  pin_memory: false
+  dataset:
+    chunk_size: ${rollout_size}
+    window_past_size: ${input_window_size}
+    window_future_size: ${input_window_size}
   simulator:
     simulator_type: "two_level"
     forcing: 10
-  dataset:
-    chunk_size: ${rollout_size}
+    method: "rk4"
 
 simulator:
   forcing: 10
 
 loss:
-  use_model_term: true
   alpha: 1.0
 
 lightning_module:
@@ -75,7 +96,7 @@ lightning_callback:
     mode: "min"
     monitor: "TotalLoss/Validation"
     save_last: true
-    save_top_k: 10
+    save_top_k: 1
     verbose: false
     save_on_train_epoch_end: true
 

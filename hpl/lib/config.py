@@ -52,11 +52,9 @@ class Config:
     print_config: bool = True
     random_seed: int = 101
     debug: bool = False
-    rollout_size: int = MISSING
-    integration_window: int = MISSING
+    rollout_length: int = MISSING
+    input_window_length: int = MISSING
     time_step: float = MISSING
-    window_past_size: int = MISSING
-    window_future_size: int = MISSING
 
     simulator: Any = MISSING
     assimilation_network: Any = MISSING

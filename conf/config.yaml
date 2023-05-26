@@ -24,7 +24,6 @@ defaults:
 output_dir_base_path: "."
 print_config: true
 debug: false
-rollout_size: 10
 
 hydra:
   job:

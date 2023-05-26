@@ -32,10 +32,10 @@ def main(cfg: DictConfig):
 
         lightning_module = init_lightning_module(cfg, console_logger)
 
-        # load assimilation network from checkpoint if provided (used only in parametrization learning)
+        # load assimilation network from checkpoint if provided (used for parametrization learning)
         if cfg.assimilation_network_checkpoint:
             console_logger.info("Loading assimilation network from checkpoint")
-            lightning_module.assimilation_network = torch.load(cfg.assimilation_network_checkpoint)
+            lightning_module.assimilation_network = torch.load(cfg.assimilation_network_checkpoint, map_location="cpu")
 
         hydra_params = mdml_logging.get_hparams_from_hydra_config(config=cfg, model=lightning_module)
         for this_logger in logger:

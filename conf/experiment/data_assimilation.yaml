@@ -13,45 +13,43 @@ defaults:
 
   - _self_ # should be last in defaults list to override everything in structured config with here defined values
 
-# hyperparameters of the method
-rollout_size: 25
-integration_window: 500
-time_step: 0.01
-window_past_size: 15
-window_future_size: 15
-
-random_seed: 111
 output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
-print_config: true
+print_config: false
 debug: false
+random_seed: 111
+
+assimilation_network_checkpoint: null
+time_step: 0.01
+rollout_length: 25
+input_window_length: 25
+
+optimizer:
+  data_assimilation:
+    lr: 0.000141421356
 
 datamodule:
-  x_grid_size: 40
-  time_step: ${time_step}
-  n_integration_steps: ${integration_window}
-  additional_noise_mean: 0.0
-  additional_noise_std: 1.0
-  n_masked_per_time_step: 20
-  mask_fill_value: 0.0
   save_training_data_dir: "data"
-  train_validation_split: 1.0
+  load_training_data_dir: null
+  data_amount: 12000
+  train_validation_split: 0.7
   shuffle_train: true
   shuffle_valid: false
-  batch_size: 1
-  drop_last_batch: false
-  num_workers: 20
+  batch_size: 64
+  drop_last_batch: true
+  num_workers: 10
   pin_memory: false
   dataset:
-    chunk_size: ${rollout_size}
-    window_past_size: ${window_past_size}
-    window_future_size: ${window_future_size}
-  simulator:
-    simulator_type: "one_level"
-    forcing: 8.0
-    method: "rk4"
+    x_grid_size: 40
+    y_grid_size: 10
+    time_step: ${time_step}
+    n_spin_up_steps: 300
+    additional_noise_std: 1.0
+    n_masked_per_step: 30
+    mask_fill_value: 0
+    rollout_length: ${rollout_length}
+    window_length: ${input_window_length}
 
 loss:
-  use_model_term: true
   alpha: 1.0
 
 simulator:
@@ -60,15 +58,11 @@ simulator:
   method: "rk4"
 
 lightning_module:
-  rollout_length: ${rollout_size}
+  rollout_length: ${rollout_length}
   time_step: ${time_step}
 
 lightning_trainer:
-  max_epochs: 120
-  check_val_every_n_epoch: null
-  val_check_interval: null
-  limit_val_batches: 0
-  num_sanity_val_steps: 0
+  max_epochs: 100
   log_every_n_steps: 50
   detect_anomaly: false
   fast_dev_run: false
@@ -89,16 +83,16 @@ lightning_callback:
   early_stopping:
     min_delta: 0.0
     mode: "min"
-    monitor: "TotalLoss/Training"
+    monitor: "TotalLoss/Validation"
     patience: 10
     verbose: true
   model_checkpoint:
     dirpath: "./logs/checkpoints/"
-    filename: "best"
+    filename: "{epoch:02d}"
     mode: "min"
-    monitor: "TotalLoss/Training"
+    monitor: "TotalLoss/Validation"
     save_last: true
-    save_top_k: 10
+    save_top_k: 1
     verbose: false
     save_on_train_epoch_end: True
 

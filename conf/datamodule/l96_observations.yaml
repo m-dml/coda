@@ -4,31 +4,29 @@ defaults:
   - simulator: l96_base
   - _self_
 
+save_training_data_dir: null
+load_training_data_dir: null
+data_amount: 2000
+train_validation_split: 0.75
+shuffle_train: true
+shuffle_valid: false
+batch_size: 32
+drop_last_batch: false
+num_workers: 10
+pin_memory: false
+
 dataset:
-  chunk_size: 25
-  window_past_size: 15
-  window_future_size: 15
+  x_grid_size: 40
+  y_grid_size: 10
+  time_step: 0.01
+  n_spin_up_steps: 300
+  additional_noise_std: 0
+  n_masked_per_step: 30
+  mask_fill_value: 0
+  rollout_length: 25
+  window_length: 25
 
 simulator:
   simulator_type: "one_level"
   forcing: 8.0
   method: "rk4"
-
-x_grid_size: 40
-y_grid_size: 10
-time_step: 0.01
-n_integration_steps: 500
-n_spin_up_steps: 300
-additional_noise_mean: 0.0
-additional_noise_std: 1.0
-n_masked_per_time_step: 20
-mask_fill_value: 0.0
-save_training_data_dir: "data"
-load_training_data_dir: null
-train_validation_split: 0.7
-shuffle_train: true
-shuffle_valid: false
-batch_size: 1
-drop_last_batch: false
-num_workers: 20
-pin_memory: false
