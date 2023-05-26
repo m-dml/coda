@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 import hydra
@@ -34,7 +35,7 @@ class LightningBaseModel(pl.LightningModule):
         self.assimilation_network: nn.Module = hydra.utils.instantiate(assimilation_network)
         self.console_logger.info(f"Instantiating loss function <{loss._target_}>")
         self.loss_function = hydra.utils.instantiate(loss)
-        self.rollout_length = rollout_length
+        self.rollout_length = rollout_length + 1
         self.time_step = time_step
 
     def rollout(self, ic: torch.Tensor) -> torch.Tensor:
@@ -44,14 +45,14 @@ class LightningBaseModel(pl.LightningModule):
         else:
             raise NotImplementedError("The simulator should be child of BaseSimulator class")
 
-    def do_step(self, batch: dict[str : torch.Tensor], stage: str = "Training") -> torch.Tensor:
-        left_ff = batch["feedforward_left"]
-        right_ff = batch["feedforward_right"]
-        observations_data = batch["observations_data"]
-        observations_mask = batch["observations_mask"]
+    def do_step(self, batch: torch.Tensor, stage: str = "Training") -> torch.Tensor:
+        observations_data = batch[0]
+        observations_mask = batch[1]
+        feed_forward_left = batch[2]
+        feed_forward_right = batch[3]
 
-        left_ics = self.assimilation_network.forward(left_ff)
-        right_ics = self.assimilation_network.forward(right_ff)
+        left_ics = self.assimilation_network.forward(feed_forward_left)
+        right_ics = self.assimilation_network.forward(feed_forward_right)
         rollout = self.rollout(left_ics.squeeze(1))
 
         if self.loss_function.use_model_term:
@@ -67,6 +68,15 @@ class LightningBaseModel(pl.LightningModule):
             if value is not None:
                 self.log(f"{key}/{stage}", value)
         return loss_dict["TotalLoss"]
+
+    def on_save_checkpoint(self, *args, **kwargs):
+        chekpoints_dir = self.trainer.checkpoint_callback.dirpath
+        if not os.path.exists(chekpoints_dir):
+            os.makedirs(chekpoints_dir)
+        torch.save(self.assimilation_network, os.path.join(chekpoints_dir, "assimilation_network.ckpt"))
+        simulator_params = sum([torch.prod(torch.tensor(p.size())).item() for p in self.simulator.parameters()])
+        if simulator_params > 0:
+            torch.save(self.simulator, os.path.join(chekpoints_dir, "simulator.ckpt"))
 
 
 class DataAssimilationModule(LightningBaseModel):
