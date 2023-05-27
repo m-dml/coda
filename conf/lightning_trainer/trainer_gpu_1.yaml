@@ -1,5 +1,5 @@
 defaults:
-  - lightning_trainer_base
+  - trainer_base
   - _self_
 
 devices: [1]
