@@ -64,9 +64,9 @@ lightning_module:
 lightning_trainer:
   max_epochs: 100
   log_every_n_steps: 50
+  val_check_interval: 0.5
   detect_anomaly: false
   fast_dev_run: false
-  devices: 1
   deterministic: false
 
 lightning_logger:

@@ -25,6 +25,7 @@ class L96DatasetBase(Dataset):
         mask_fill_value: int = 0,
         save_dir: str = None,
         load_dir: str = None,
+        save_ground_truth: bool = False,
     ):
         self.simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel] = simulator
         self.x_grid_size = x_grid_size
@@ -42,6 +43,8 @@ class L96DatasetBase(Dataset):
             observations, mask = self.load_data()
         else:
             ground_truth = self.generate_simulation()
+            if save_ground_truth:
+                self.ground_truth = ground_truth
             observations, mask = self.corrupt_simulation(ground_truth)
         self.data = torch.stack((observations, mask), dim=1)
         self.n_time_steps = self.data.size(0)
@@ -126,7 +129,12 @@ class L96InferenceDataset(L96DatasetBase):
     def __init__(self, window_length: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.window_length = window_length
-        self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) - self.window_length
+
+        self.data = self.data.movedim(0, -1)
+        self.data = tnf.pad(self.data, (window_length, window_length + 1), mode="constant", value=0)
+        self.data = self.data.movedim(-1, 1)
+
+        self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) + self.window_length
 
     def __len__(self):
         return len(self.rollout_starting_index)
