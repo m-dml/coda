@@ -42,6 +42,8 @@ def main(cfg: DictConfig):
         # parameters from experiment config file
         experiment_window_length = experiment_config.datamodule.dataset.window_length
         console_logger.info(f"Set window length to {experiment_window_length}.")
+        experiment_n_masked_per_step = experiment_config.datamodule.dataset.n_masked_per_step
+        console_logger.info(f"Set number of masked elements per step to {experiment_n_masked_per_step}.")
 
         simulator = hydra.utils.instantiate(cfg.simulator).to(device)
 
@@ -51,6 +53,7 @@ def main(cfg: DictConfig):
                 cfg.dataset,
                 simulator=simulator,
                 window_length=experiment_window_length,
+                n_masked_per_step=experiment_n_masked_per_step,
             )
             dataloader = DataLoader(dataset, batch_size=len(dataset))
 
