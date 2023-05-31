@@ -46,19 +46,20 @@ class LightningBaseModel(pl.LightningModule):
             raise NotImplementedError("The simulator should be child of BaseSimulator class")
 
     def do_step(self, batch: torch.Tensor, stage: str = "Training") -> torch.Tensor:
+        # Training variables
         observations_data = batch[0]
         observations_mask = batch[1]
         feed_forward_left = batch[2]
         feed_forward_right = batch[3]
 
-        left_ics = self.assimilation_network.forward(feed_forward_left)
-        right_ics = self.assimilation_network.forward(feed_forward_right)
-        rollout = self.rollout(left_ics.squeeze(1))
+        estimated_state_left = self.assimilation_network.forward(feed_forward_left)
+        estimated_state_right = self.assimilation_network.forward(feed_forward_right)
+        rollout = self.rollout(estimated_state_left.squeeze(1))
 
         if self.loss_function.use_model_term:
             loss_dict: dict = self.loss_function(
                 prediction=[rollout, rollout[:, -1, :].unsqueeze(1)],
-                target=[observations_data, right_ics],
+                target=[observations_data, estimated_state_right],
                 mask=observations_mask,
             )
         else:
@@ -67,6 +68,7 @@ class LightningBaseModel(pl.LightningModule):
         for key, value in loss_dict.items():
             if value is not None:
                 self.log(f"{key}/{stage}", value)
+
         return loss_dict["TotalLoss"]
 
     def on_save_checkpoint(self, *args, **kwargs):

@@ -24,6 +24,17 @@ class L96Dataset:
 class L96InferenceDataset:
     _target_: str = "hpl.datamodule.DataLoader.L96InferenceDataset"
     window_length: int = 15
+    simulator: Any = None
+    x_grid_size: int = 40
+    y_grid_size: int = 10
+    time_step: float = 0.01
+    n_integration_steps: int = 500
+    n_spin_up_steps: int = 300
+    additional_noise_std: float = 0
+    n_masked_per_step: int = 20
+    mask_fill_value: int = 0
+    save_dir: Any = None
+    load_dir: Any = None
 
 
 @dataclass

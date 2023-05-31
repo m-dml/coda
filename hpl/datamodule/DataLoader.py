@@ -25,7 +25,7 @@ class L96DatasetBase(Dataset):
         mask_fill_value: int = 0,
         save_dir: str = None,
         load_dir: str = None,
-        save_ground_truth: bool = False,
+        load_ground_truth: bool = False,
     ):
         self.simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel] = simulator
         self.x_grid_size = x_grid_size
@@ -38,21 +38,24 @@ class L96DatasetBase(Dataset):
         self.mask_fill_value = mask_fill_value
         self.save_dir = save_dir
         self.load_dir = load_dir
+        self.load_ground_truth = load_ground_truth
 
         if load_dir:
-            observations, mask = self.load_data()
+            observations, mask, ground_truth = self.load_data()
         else:
             ground_truth = self.generate_simulation()
-            if save_ground_truth:
-                self.ground_truth = ground_truth
             observations, mask = self.corrupt_simulation(ground_truth)
+
         self.data = torch.stack((observations, mask), dim=1)
+        if load_ground_truth:
+            self.data = torch.concat((self.data, ground_truth.unsqueeze(1)), dim=1)
         self.n_time_steps = self.data.size(0)
 
     def load_data(self) -> (torch.Tensor, torch.Tensor):
-        observations = torch.load(os.path.join(self.load_dir, "ground_truth.pt"))
+        observations = torch.load(os.path.join(self.load_dir, "observations.pt"))
         mask = torch.load(os.path.join(self.load_dir, "mask.pt"))
-        return observations, mask
+        ground_truth = torch.load(os.path.join(self.load_dir, "ground_truth.pt"))
+        return observations, mask, ground_truth
 
     def generate_simulation(self) -> torch.Tensor:
         time_array = torch.arange(
@@ -117,11 +120,16 @@ class L96Dataset(L96DatasetBase):
     def __getitem__(self, index: int):
         start = self.rollout_starting_index[index]
         end = start + self.rollout_length + 1
-        observations_data = self.data[0, start:end]
-        observations_mask = self.data[1, start:end].bool()
-        feed_forward_left = self.data[:, start - self.window_length : start + self.window_length + 1]
-        feed_forward_right = self.data[:, end - self.window_length : end + self.window_length + 1]
+        # ground_truth_data = self.data[0, start:end]
+        observations_data = self.data[1, start:end]
+        observations_mask = self.data[2, start:end].bool()
 
+        feed_forward_left = self.data[1:, start - self.window_length : start + self.window_length + 1]
+        feed_forward_right = self.data[1:, end - self.window_length : end + self.window_length + 1]
+
+        # true_state_left = self.data[0, start]
+        # true_state_right = self.data[0, end]
+        #
         return observations_data, observations_mask, feed_forward_left, feed_forward_right
 
 
@@ -136,6 +144,10 @@ class L96InferenceDataset(L96DatasetBase):
 
         self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) + self.window_length
 
+    @property
+    def ground_truth(self):
+        return self.data[-1, self.window_length : -(self.window_length + 1)]
+
     def __len__(self):
         return len(self.rollout_starting_index)
 
@@ -143,7 +155,7 @@ class L96InferenceDataset(L96DatasetBase):
         ic_index = self.rollout_starting_index[index]
         start = ic_index - self.window_length
         end = ic_index + self.window_length + 1
-        return self.data[:, start:end]
+        return self.data[:2, start:end]
 
 
 class L96DataLoader(pl.LightningDataModule):
