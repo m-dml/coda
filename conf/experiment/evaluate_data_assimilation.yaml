@@ -4,7 +4,7 @@ defaults:
   - dataset: l96_inference_dataset_base
   - _self_
 
-output_dir_base_path: "output"
+output_dir_base_path: "/work/bg1315/Zinchenko/output"
 exp_base_dir: null
 random_seed: 101
 n_trials: 1000

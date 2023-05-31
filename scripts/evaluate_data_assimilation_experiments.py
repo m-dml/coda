@@ -8,6 +8,7 @@ search_directories_list = [
     "/work/bg1315/Zinchenko/output/data_assimilation",
 ]
 n_trials = 1000
+console_logger = mdml_logging.get_logger(__name__)
 
 
 def get_query_string(
@@ -21,7 +22,7 @@ def get_query_string(
             f"exp_base_dir={directories_list_string}",
             f"observations_length={observations_length}",
             f"n_trials={n_trials}",
-            "hydra/launcher=local -m",
+            "hydra/launcher=levante -m",
         )
     )
     return query_string
@@ -42,10 +43,10 @@ def main():
     os.chdir("..")
 
     directories_list = find_experiments_directories(search_directories_list)
-    mdml_logging.info(f"Found {len(directories_list)} experiments.")
+    console_logger.info(f"Found {len(directories_list)} experiments.")
     directories_list_sting = ",".join(directories_list)
     shell_command = get_query_string(directories_list_sting, observations_length, n_trials)
-    mdml_logging.info("Start testing")
+    console_logger.info("Start testing")
     os.system(shell_command)
 
 
