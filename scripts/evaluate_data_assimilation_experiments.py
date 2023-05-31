@@ -42,10 +42,10 @@ def main():
     os.chdir("..")
 
     directories_list = find_experiments_directories(search_directories_list)
-    mdml_logging.indo(f"Found {len(directories_list)} experiments.")
+    mdml_logging.info(f"Found {len(directories_list)} experiments.")
     directories_list_sting = ",".join(directories_list)
     shell_command = get_query_string(directories_list_sting, observations_length, n_trials)
-    mdml_logging.indo("Start testing")
+    mdml_logging.info("Start testing")
     os.system(shell_command)
 
 
