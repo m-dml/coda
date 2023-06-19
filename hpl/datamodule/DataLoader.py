@@ -11,7 +11,7 @@ from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset
 
 
-class L96DatasetBase(Dataset):
+class L96GenerativeDatasetBase(Dataset):
     def __init__(
         self,
         simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel, None] = None,
@@ -25,7 +25,6 @@ class L96DatasetBase(Dataset):
         mask_fill_value: int = 0,
         save_dir: str = None,
         load_dir: str = None,
-        load_ground_truth: bool = False,
     ):
         self.simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel] = simulator
         self.x_grid_size = x_grid_size
@@ -38,7 +37,6 @@ class L96DatasetBase(Dataset):
         self.mask_fill_value = mask_fill_value
         self.save_dir = save_dir
         self.load_dir = load_dir
-        self.load_ground_truth = load_ground_truth
 
         if load_dir:
             observations, mask, ground_truth = self.load_data()
@@ -46,9 +44,7 @@ class L96DatasetBase(Dataset):
             ground_truth = self.generate_simulation()
             observations, mask = self.corrupt_simulation(ground_truth)
 
-        self.data = torch.stack((observations, mask), dim=1)
-        if load_ground_truth:
-            self.data = torch.concat((self.data, ground_truth.unsqueeze(1)), dim=1)
+        self.data = torch.stack((observations, mask, ground_truth), dim=1)
         self.n_time_steps = self.data.size(0)
 
     def load_data(self) -> (torch.Tensor, torch.Tensor):
@@ -102,60 +98,122 @@ class L96DatasetBase(Dataset):
         return observations, mask_inverse
 
 
-class L96Dataset(L96DatasetBase):
-    def __init__(self, rollout_length: int, window_length: int, *args, **kwargs):
+class L96Dataset(L96GenerativeDatasetBase):
+    def __init__(
+        self,
+        window_length: int,
+        rollout_length: int,
+        drop_edge_cases: bool = True,
+        add_index_channel: bool = True,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        self._inference_mode = False
+        self.drop_edge_cases = drop_edge_cases
+        self.add_index_channel = add_index_channel
+        self.window_length = window_length
         self.rollout_length = rollout_length
-        self.window_length = window_length
 
+        self.__pad_data_tensor_with_zeros()
+        self.sampling_indexes = self.__get_sampling_indexes()
+
+    def __pad_data_tensor_with_zeros(self) -> None:
         self.data = self.data.movedim(0, -1)
-        self.data = tnf.pad(self.data, (window_length, window_length + 1), mode="constant", value=0)
+        self.data = tnf.pad(self.data, (self.window_length, self.window_length + 1), mode="constant", value=0)
         self.data = self.data.movedim(-1, 1)
 
-        self.rollout_starting_index = torch.arange(0, self.n_time_steps - rollout_length, step=1) + window_length
+    def __get_sampling_indexes(self) -> torch.Tensor:
+        window_length = self.window_length
+        if self._inference_mode:
+            if self.drop_edge_cases:
+                return torch.arange(window_length, self.n_time_steps - window_length, step=1) + window_length
+            return torch.arange(0, self.n_time_steps, step=1) + self.window_length
+
+        if self.drop_edge_cases:
+            return torch.arange(0, self.n_time_steps - self.rollout_length - window_length, step=1) + window_length
+        return torch.arange(0, self.n_time_steps - self.rollout_length, step=1) + window_length
 
     def __len__(self):
-        return len(self.rollout_starting_index)
+        return len(self.sampling_indexes)
+
+    def add_channels_to_input(self, tensors: list[torch.Tensor]):
+        if len(tensors) == 0:
+            raise ValueError("list should contain at least one tensor")
+        example_tensor = tensors[0]
+        relative_indexes = torch.arange(-self.window_length, self.window_length + 1)
+        relative_indexes = relative_indexes.unsqueeze(-1).expand((1, example_tensor.size(1), example_tensor.size(-1)))
+        for i, tensor in enumerate(tensors):
+            index_mul_state = tensor[0, :, :] * relative_indexes.squeeze()
+            index_mul_state = index_mul_state.unsqueeze(0)
+            tensors[i] = torch.concat((tensor, relative_indexes, index_mul_state), dim=0)
+        return tensors
 
     def __getitem__(self, index: int):
-        start = self.rollout_starting_index[index]
+        start = self.sampling_indexes[index]
         end = start + self.rollout_length + 1
-        # ground_truth_data = self.data[0, start:end]
-        observations_data = self.data[1, start:end]
-        observations_mask = self.data[2, start:end].bool()
 
-        feed_forward_left = self.data[1:, start - self.window_length : start + self.window_length + 1]
-        feed_forward_right = self.data[1:, end - self.window_length : end + self.window_length + 1]
+        # training variables
+        observations_data = self.data[0, start:end]
+        observations_mask = self.data[1, start:end].bool()
+        # neural network input
+        feed_forward_left = self.data[:2, start - self.window_length : start + self.window_length + 1]
+        feed_forward_right = self.data[:2, end - self.window_length : end + self.window_length + 1]
+        if self.add_index_channel:
+            feed_forward_left, feed_forward_right = self.add_channels_to_input([feed_forward_left, feed_forward_right])
 
-        # true_state_left = self.data[0, start]
-        # true_state_right = self.data[0, end]
-        #
-        return observations_data, observations_mask, feed_forward_left, feed_forward_right
+        # metrics variables
+        ground_truth_data = self.data[2, start:end]
+        true_state_left = self.data[2, start]
+        true_state_right = self.data[2, end]
+
+        return (
+            observations_data,
+            observations_mask,
+            feed_forward_left,
+            feed_forward_right,
+            ground_truth_data,
+            true_state_left,
+            true_state_right,
+        )
 
 
-class L96InferenceDataset(L96DatasetBase):
-    def __init__(self, window_length: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.window_length = window_length
-
-        self.data = self.data.movedim(0, -1)
-        self.data = tnf.pad(self.data, (window_length, window_length + 1), mode="constant", value=0)
-        self.data = self.data.movedim(-1, 1)
-
-        self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) + self.window_length
-
-    @property
-    def ground_truth(self):
-        return self.data[-1, self.window_length : -(self.window_length + 1)]
-
-    def __len__(self):
-        return len(self.rollout_starting_index)
-
-    def __getitem__(self, index: int):
-        ic_index = self.rollout_starting_index[index]
-        start = ic_index - self.window_length
-        end = ic_index + self.window_length + 1
-        return self.data[:2, start:end]
+#
+# class L96InferenceDataset(L96DatasetBase):
+#     def __init__(
+#             self,
+#             window_length: int,
+#             drop_edge_cases: bool = True,
+#             *args,
+#             **kwargs,
+#     ):
+#         super().__init__(*args, **kwargs)
+#         self.window_length = window_length
+#         self.drop_edge_cases = drop_edge_cases
+#
+#         self.data = self.data.movedim(0, -1)
+#         self.data = tnf.pad(self.data, (window_length, window_length + 1), mode="constant", value=0)
+#         self.data = self.data.movedim(-1, 1)
+#
+#         if drop_edge_cases:
+#             self.rollout_starting_index = torch.arange(
+#             self.window_length, self.n_time_steps-self.window_length, step=1
+#             ) + self.window_length
+#         else:
+#             self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) + self.window_length
+#
+#     @property
+#     def ground_truth(self):
+#         return self.data[-1, self.rollout_starting_index]
+#
+#     def __len__(self):
+#         return len(self.rollout_starting_index)
+#
+#     def __getitem__(self, index: int):
+#         ic_index = self.rollout_starting_index[index]
+#         start = ic_index - self.window_length
+#         end = ic_index + self.window_length + 1
+#         return self.data[:2, start:end]
 
 
 class L96DataLoader(pl.LightningDataModule):

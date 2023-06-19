@@ -8,6 +8,7 @@ import torch.nn as nn
 from mdml_tools.simulators.base import BaseSimulator
 from mdml_tools.utils.logging import get_logger
 from omegaconf import DictConfig
+from torchmetrics import MeanSquaredError
 
 
 class LightningBaseModel(pl.LightningModule):
@@ -38,6 +39,8 @@ class LightningBaseModel(pl.LightningModule):
         self.rollout_length = rollout_length + 1
         self.time_step = time_step
 
+        self.rmse_func = MeanSquaredError(False)
+
     def rollout(self, ic: torch.Tensor) -> torch.Tensor:
         if isinstance(self.simulator, BaseSimulator):
             t = torch.arange(0, self.rollout_length * self.time_step, self.time_step)
@@ -52,10 +55,14 @@ class LightningBaseModel(pl.LightningModule):
         feed_forward_left = batch[2]
         feed_forward_right = batch[3]
 
+        # Variables to compute metrics
+        batch[4]
+        true_state_left = batch[5]
+        true_state_right = batch[6]
+
         estimated_state_left = self.assimilation_network.forward(feed_forward_left)
         estimated_state_right = self.assimilation_network.forward(feed_forward_right)
         rollout = self.rollout(estimated_state_left.squeeze(1))
-
         if self.loss_function.use_model_term:
             loss_dict: dict = self.loss_function(
                 prediction=[rollout, rollout[:, -1, :].unsqueeze(1)],
@@ -68,6 +75,13 @@ class LightningBaseModel(pl.LightningModule):
         for key, value in loss_dict.items():
             if value is not None:
                 self.log(f"{key}/{stage}", value)
+
+        # Compute metrics
+        with torch.no_grad():
+            rmse_state_left = self.rmse_func(estimated_state_left.squeeze(1), true_state_left)
+            rmse_state_right = self.rmse_func(estimated_state_right.squeeze(1), true_state_right)
+            self.log(f"RMSEStateLeft/{stage}", rmse_state_left)
+            self.log(f"RMSEStateRight/{stage}", rmse_state_right)
 
         return loss_dict["TotalLoss"]
 

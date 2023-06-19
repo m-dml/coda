@@ -46,7 +46,6 @@ def register_configs() -> None:
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
-    cs.store(name="evaluate_config", node=ConfigEvaluateDA)
 
 
 @dataclass
@@ -70,15 +69,3 @@ class Config:
     lightning_trainer: Any = MISSING
     lightning_logger: Any = MISSING
     lightning_callback: Any = None
-
-
-@dataclass
-class ConfigEvaluateDA:
-    output_dir_base_path: str = MISSING
-    exp_base_dir: str = MISSING
-    random_seed: int = 101
-    n_trials: int = 1000
-    observations_length: int = 100
-    search_in_directories: Any = MISSING
-    simulator: Any = MISSING
-    dataset: Any = MISSING
