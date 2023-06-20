@@ -105,11 +105,12 @@ class L96Dataset(L96GenerativeDatasetBase):
         rollout_length: int,
         drop_edge_cases: bool = True,
         add_index_channel: bool = True,
+        inference_mode: bool = False,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self._inference_mode = False
+        self._inference_mode = inference_mode
         self.drop_edge_cases = drop_edge_cases
         self.add_index_channel = add_index_channel
         self.window_length = window_length
@@ -176,6 +177,24 @@ class L96Dataset(L96GenerativeDatasetBase):
             true_state_left,
             true_state_right,
         )
+
+
+class L96InferenceDataset(L96Dataset):
+    def __init__(self, *args, **kwargs):
+        super().__init__(inference_mode=True, rollout_length=1, *args, **kwargs)
+        self.ground_truth = self.data[2, self.sampling_indexes]
+
+    def __len__(self):
+        return len(self.sampling_indexes)
+
+    def __getitem__(self, index: int):
+        state_index = self.sampling_indexes[index]
+
+        feed_forward = self.data[:2, state_index - self.window_length : state_index + self.window_length + 1]
+        if self.add_index_channel:
+            feed_forward = self.add_channels_to_input([feed_forward]).pop()
+
+        return feed_forward
 
 
 #

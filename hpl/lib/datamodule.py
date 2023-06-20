@@ -18,12 +18,18 @@ class L96Dataset:
     load_dir: Any = None
     rollout_length: int = 25
     window_length: int = 15
+    drop_edge_cases: bool = True
+    add_index_channel: bool = True
+    inference_mode: bool = False
 
 
 @dataclass
 class L96InferenceDataset:
     _target_: str = "hpl.datamodule.DataLoader.L96InferenceDataset"
     window_length: int = 15
+    drop_edge_cases: bool = True
+    add_index_channel: bool = True
+    inference_mode: bool = False
     simulator: Any = None
     x_grid_size: int = 40
     y_grid_size: int = 10
