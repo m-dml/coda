@@ -46,6 +46,8 @@ datamodule:
     mask_fill_value: 0
     rollout_length: ${rollout_length}
     window_length: ${input_window_length}
+    drop_edge_cases: true
+    add_index_channel: true
     simulator:
       simulator_type: "two_level"
       forcing: 10

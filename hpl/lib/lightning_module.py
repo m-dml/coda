@@ -28,7 +28,7 @@ class ParameterTuningModule:
 
 @dataclass
 class ParametrizationLearningModule:
-    _target_: str = "hpl.model.lightning_model.ParameterTuningModule"
+    _target_: str = "hpl.model.lightning_model.ParametrizationLearningModule"
     _recursive_: bool = False
     simulator: Any = None
     assimilation_network: Any = None
