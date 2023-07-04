@@ -66,10 +66,6 @@ lightning_module:
 
 lightning_trainer:
   max_epochs: 100
-  check_val_every_n_epoch: 1
-  val_check_interval: null
-  limit_val_batches: null
-  num_sanity_val_steps: 1
   log_every_n_steps: 50
   detect_anomaly: false
   fast_dev_run: false
