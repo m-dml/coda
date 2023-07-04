@@ -17,38 +17,34 @@ defaults:
 output_dir_base_path: "/gpfs/work/zinchenk/hpl_logs"
 print_config: false
 debug: false
-random_seed: 101
+random_seed: 111
 
 assimilation_network_checkpoint: null
-dataset_size: 12000
 time_step: 0.01
-rollout_size: 25
-input_window_size: 25
+rollout_length: 1
+input_window_length: 5
 
 datamodule:
-  x_grid_size: 40
-  time_step: ${time_step}
-  n_integration_steps: ${dataset_size}
-  additional_noise_mean: 0.0
-  additional_noise_std: 1.0
-  n_masked_per_time_step: 30
-  mask_fill_value: 0.0
   save_training_data_dir: "data"
-  train_validation_split: 0.7
+  load_training_data_dir: null
+  data_amount: 32000
+  train_validation_split: 0.8
   shuffle_train: true
   shuffle_valid: false
   batch_size: 32
-  drop_last_batch: false
-  num_workers: 20
+  drop_last_batch: true
+  num_workers: 10
   pin_memory: false
   dataset:
-    chunk_size: ${rollout_size}
-    window_past_size: ${input_window_size}
-    window_future_size: ${input_window_size}
-  simulator:
-    simulator_type: "one_level"
-    forcing: 8.0
-    method: "rk4"
+    x_grid_size: 40
+    y_grid_size: 10
+    time_step: ${time_step}
+    n_spin_up_steps: 300
+    additional_noise_std: 1.0
+    n_masked_per_step: 30
+    mask_fill_value: 0
+    rollout_length: ${rollout_length}
+    window_length: ${input_window_length}
 
 loss:
   alpha: 1.0
@@ -59,7 +55,7 @@ simulator:
   method: "rk4"
 
 lightning_module:
-  rollout_length: ${rollout_size}
+  rollout_length: ${rollout_length}
   time_step: 0.01
 
 lightning_trainer:
@@ -94,8 +90,8 @@ lightning_callback:
     monitor: "TotalLoss/Validation"
     save_last: true
     save_top_k: 1
-    verbose: true
-    save_on_train_epoch_end: true
+    verbose: false
+    save_on_train_epoch_end: True
 
 hydra:
   job:
