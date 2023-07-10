@@ -1,11 +1,12 @@
 defaults:
-  - fully_connected_model_base
+  - fully_convolutional_network_base
   - activation: relu_base
+  - convolution: conv1d_base
   - _self_
 
-bias_in_last_layer: true
-hidden_layers: [64, 128, 64]
-input_features: 40
-normalize: false
-num_classes: 40
-use_batch_norm: false
+convolution:
+  kernel_size: 1
+  stride: 1
+  padding: 0
+
+layers: [1, 30, 30, 1]

@@ -62,7 +62,8 @@ class LightningBaseModel(pl.LightningModule):
 
         estimated_state_left = self.assimilation_network.forward(feed_forward_left)
         estimated_state_right = self.assimilation_network.forward(feed_forward_right)
-        rollout = self.rollout(estimated_state_left.squeeze(1))
+        rollout = self.rollout(estimated_state_left)
+
         if self.loss_function.use_model_term:
             loss_dict: dict = self.loss_function(
                 prediction=[rollout, rollout[:, -1, :].unsqueeze(1)],

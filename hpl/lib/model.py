@@ -14,3 +14,16 @@ class L96Parametrized:
     parametrization: Any = MISSING
     method: str = "rk4"
     options: Any = None
+
+
+@dataclass
+class FullyConvolutionalNetwork:
+    """Hydra config for Fully Convolutional Network."""
+
+    _target_: str = "hpl.model.fully_convolutional.FullyConvolutionalNetwork"
+    _recursive_: bool = False
+    layers: Any = MISSING
+    convolution: Any = MISSING
+    activation: Any = MISSING
+    batch_norm: Any = None
+    dropout: Any = None

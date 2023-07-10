@@ -20,4 +20,4 @@ class L96Parametrized(BaseSimulator):
 
     def forward(self, t: torch.Tensor, state: torch.Tensor):
         tendencies_x = l96_tendencies_x(x=state, forcing=self.forcing)
-        return tendencies_x + self.parametrization.forward(state.squeeze().float())
+        return tendencies_x + self.parametrization.forward(state)

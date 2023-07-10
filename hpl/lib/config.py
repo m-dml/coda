@@ -8,7 +8,7 @@ from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule, L96Dataset, L96InferenceDataset
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule, ParametrizationLearningModule
 from hpl.lib.loss import Four4DVarLoss
-from hpl.lib.model import L96Parametrized
+from hpl.lib.model import FullyConvolutionalNetwork, L96Parametrized
 
 
 def register_configs() -> None:
@@ -19,6 +19,8 @@ def register_configs() -> None:
         "simulator": ["simulator", "datamodule/simulator"],
         "model": "simulator/parametrization",
         "activation": "simulator/parametrization/activation",
+        "convolution": "simulator/parametrization/convolution",
+        "batch_norm": "simulator/parametrization/batch_norm",
     }
     add_hydra_models_to_config_store(cs, rename_groups)
 
@@ -31,6 +33,9 @@ def register_configs() -> None:
 
     # encoder:
     cs.store(name="unet", node=Unet, group="assimilation_network")
+
+    # parametrization:
+    cs.store(name="fully_convolutional_network_base", node=FullyConvolutionalNetwork, group="simulator/parametrization")
 
     # lightning module:
     cs.store(name="data_assimilation_module", node=DataAssimilationModule, group="lightning_module")

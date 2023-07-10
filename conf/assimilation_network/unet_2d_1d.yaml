@@ -2,7 +2,7 @@ defaults:
   - unet
   - _self_
 
-in_channels: 2
+in_channels: 4
 out_channels: 1
 
 encoder_dim: 2
