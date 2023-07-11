@@ -1,0 +1,63 @@
+defaults:
+  - unet_base
+  - encoder: conv_encoder_base
+  - encoder/block: conv_block_encoding_base
+  - encoder/block/convolution: periodic_conv2d_base
+  - encoder/block/pooling: max_pool2d_base
+  - encoder/block/batch_norm: null
+  - encoder/block/dropout: null
+  - encoder/block/activation: relu_base
+  - decoder: conv_decoder_base
+  - decoder/block: conv_block_decoding_base
+  - decoder/block/convolution: periodic_conv1d_base
+  - decoder/block/upscale: conv_transpose1d_base
+  - decoder/block/batch_norm: null
+  - decoder/block/dropout: null
+  - decoder/block/activation: relu_base
+  - global_pool: global_max_pool_base
+  - output_convolution: periodic_conv1d_base
+
+  - _self_
+
+encoder:
+  levels:
+    - [4, 32, 32]
+    - [32, 64, 64]
+    - [64, 128, 128]
+  block:
+    convolution:
+      kernel_size: 3
+      padding: 1
+      stride: 1
+      padding_mode: "circular"
+    pooling:
+      kernel_size: 2
+      stride: 2
+      padding: 0
+
+decoder:
+  levels:
+    - [128, 128, 64]
+    - [128, 64, 32]
+    - [64, 32, 32]
+  block:
+    convolution:
+      kernel_size: 3
+      stride: 1
+      padding: 3
+      padding_mode: "circular"
+    upscale:
+      kernel_size: 2
+      stride: 2
+      padding: 0
+
+output_convolution:
+  in_channels: 32
+  out_channels: 1
+  kernel_size: 3
+  stride: 1
+  padding: 3
+  padding_mode: "circular"
+
+global_pool:
+  dim: -2

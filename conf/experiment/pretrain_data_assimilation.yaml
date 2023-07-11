@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - override /simulator: l96_base
-  - override /assimilation_network: unet_2d_1d
+  - override /assimilation_network: unet
   - override /loss: 4dvar
   - override /datamodule: l96_observations
   - override /lightning_module: data_assimilation_module

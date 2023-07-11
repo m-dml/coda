@@ -7,7 +7,6 @@ class Four4DVarLoss:
     """4DVar loss function.
 
     Args:
-        use_model_term (bool): whether calculate missmatch between sub-windows
         alpha (float): simulator error scaler is None by default
             use 1 / model_error_variance if alpha is not provided
     """
@@ -36,7 +35,7 @@ class Four4DVarLoss:
 
         Returns:
              dict[str: torch.Tensor]: dictionary containing loss values;
-             if use_model_term parameter is False contain keys ["DataLoss", "TotalLoss"]
+             if alpha == 0 then contain keys ["DataLoss", "TotalLoss"]
              else contain keys ["DataLoss", "ModelLoss", "TotalLoss"]
         """
         if isinstance(prediction, torch.Tensor):

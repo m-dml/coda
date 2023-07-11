@@ -36,5 +36,4 @@ dependencies:
       - torch-tb-profiler
       - hydra-colorlog
       - hydra-submitit-launcher
-      - git+https://codebase.helmholtz.cloud/m-dml/unet-pytorch.git
       - git+https://codebase.helmholtz.cloud/m-dml/mdml-tools.git

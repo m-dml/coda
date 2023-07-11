@@ -2,7 +2,7 @@
 defaults:
   - override /simulator: l96_parametrized_base
   - override /simulator/parametrization: fcnet
-  - override /assimilation_network: unet_2d_1d
+  - override /assimilation_network: unet
   - override /loss: 4dvar
   - override /datamodule: l96_observations
   - override /lightning_module: parametrization_learning_module
@@ -23,12 +23,12 @@ random_seed: 111
 assimilation_network_checkpoint: null # use pretrained DA encoder if provided
 time_step: 0.01
 rollout_length: 1
-input_window_length: 5
+input_window_length: 10
 
 datamodule:
   save_training_data_dir: "data"
   load_training_data_dir: null
-  data_amount: 32000
+  data_amount: 36000
   train_validation_split: 0.8
   shuffle_train: true
   shuffle_valid: false

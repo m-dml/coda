@@ -4,11 +4,21 @@ from typing import Any
 from hydra.conf import ConfigStore, MISSING
 from mdml_tools.utils import add_hydra_models_to_config_store
 
-from hpl.lib.da_encoder import Unet
 from hpl.lib.datamodule import L96DataModule, L96Dataset, L96InferenceDataset
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule, ParametrizationLearningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import FullyConvolutionalNetwork, L96Parametrized
+from hpl.lib.unet import (
+    ConvolutionalDecoder,
+    ConvolutionalDecodingBlock,
+    ConvolutionalEncoder,
+    ConvolutionalEncodingBlock,
+    GlobalAvgPool,
+    GlobalMaxPool,
+    PeriodicConv1d,
+    PeriodicConv2d,
+    Unet,
+)
 
 
 def register_configs() -> None:
@@ -18,9 +28,31 @@ def register_configs() -> None:
         "optimizer": ["optimizer/data_assimilation", "optimizer/parametrization"],
         "simulator": ["simulator", "datamodule/simulator"],
         "model": "simulator/parametrization",
-        "activation": "simulator/parametrization/activation",
-        "convolution": "simulator/parametrization/convolution",
-        "batch_norm": "simulator/parametrization/batch_norm",
+        "activation": [
+            "simulator/parametrization/activation",
+            "assimilation_network/encoder/block/activation",
+            "assimilation_network/decoder/block/activation",
+        ],
+        "convolution": [
+            "simulator/parametrization/convolution",
+            "assimilation_network/encoder/block/convolution",
+            "assimilation_network/decoder/block/convolution",
+            "assimilation_network/decoder/block/upscale",
+            "assimilation_network/output_convolution",
+        ],
+        "batch_norm": [
+            "simulator/parametrization/batch_norm",
+            "assimilation_network/encoder/block/batch_norm",
+            "assimilation_network/decoder/block/batch_norm",
+        ],
+        "dropout": [
+            "simulator/parametrization/dropout",
+            "assimilation_network/encoder/block/dropout",
+            "assimilation_network/decoder/block/dropout",
+        ],
+        "pooling": [
+            "assimilation_network/encoder/block/pooling",
+        ],
     }
     add_hydra_models_to_config_store(cs, rename_groups)
 
@@ -32,7 +64,17 @@ def register_configs() -> None:
     cs.store(name="l96_parametrized_base", node=L96Parametrized, group=model_group)
 
     # encoder:
-    cs.store(name="unet", node=Unet, group="assimilation_network")
+    cs.store("unet_base", node=Unet, group="assimilation_network")
+    cs.store("conv_encoder_base", node=ConvolutionalEncoder, group="assimilation_network/encoder")
+    cs.store("conv_block_encoding_base", node=ConvolutionalEncodingBlock, group="assimilation_network/encoder/block")
+    cs.store("conv_decoder_base", node=ConvolutionalDecoder, group="assimilation_network/decoder")
+    cs.store("conv_block_decoding_base", node=ConvolutionalDecodingBlock, group="assimilation_network/decoder/block")
+    cs.store("global_max_pool_base", node=GlobalMaxPool, group="assimilation_network/global_pool")
+    cs.store("global_avg_pool_base", node=GlobalAvgPool, group="assimilation_network/global_pool")
+
+    for group_name in rename_groups["convolution"]:
+        cs.store("periodic_conv1d_base", node=PeriodicConv1d, group=group_name)
+        cs.store("periodic_conv2d_base", node=PeriodicConv2d, group=group_name)
 
     # parametrization:
     cs.store(name="fully_convolutional_network_base", node=FullyConvolutionalNetwork, group="simulator/parametrization")
