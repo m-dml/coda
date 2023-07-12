@@ -56,7 +56,6 @@ class LightningBaseModel(pl.LightningModule):
         feed_forward_right = batch[3]
 
         # Variables to compute metrics
-        batch[4]
         true_state_left = batch[5]
         true_state_right = batch[6]
 
@@ -95,6 +94,9 @@ class LightningBaseModel(pl.LightningModule):
         if simulator_params > 0:
             torch.save(self.simulator, os.path.join(chekpoints_dir, "simulator.ckpt"))
 
+    def forward(self, input_window: torch.Tensor) -> torch.Tensor:
+        return self.assimilation_network.forward(input_window)
+
 
 class DataAssimilationModule(LightningBaseModel):
     def __init__(
@@ -119,9 +121,6 @@ class DataAssimilationModule(LightningBaseModel):
 
     def validation_step(self, batch, *args, **kwargs):
         return self.do_step(batch, "Validation")
-
-    def forward(self, input_window: torch.Tensor) -> torch.Tensor:
-        return self.assimilation_network.forward(input_window)
 
 
 class ParameterTuningModule(LightningBaseModel):

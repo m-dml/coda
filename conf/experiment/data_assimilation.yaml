@@ -19,6 +19,7 @@ debug: false
 random_seed: 111
 
 assimilation_network_checkpoint: null
+time_step: 0.01
 rollout_length: 1
 input_window_length: 10
 
@@ -36,15 +37,19 @@ datamodule:
   dataset:
     x_grid_size: 40
     y_grid_size: 10
-    time_step: 0.01
+    time_step: ${time_step}
     n_spin_up_steps: 300
     additional_noise_std: 1.0
     n_masked_per_step: 30
     mask_fill_value: 0
     rollout_length: ${rollout_length}
     window_length: ${input_window_length}
-    drop_edge_cases: true
+    drop_edge_cases: false
     add_index_channel: true
+    simulator:
+      simulator_type: "one_level"
+      forcing: 8
+      method: "rk4"
 
 loss:
   alpha: 1.0
