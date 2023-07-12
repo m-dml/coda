@@ -101,6 +101,7 @@ class Config:
     print_config: bool = True
     random_seed: int = 101
     debug: bool = False
+    time_step: int = MISSING
     rollout_length: int = MISSING
     input_window_length: int = MISSING
 
