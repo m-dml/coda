@@ -103,7 +103,6 @@ class Config:
     debug: bool = False
     rollout_length: int = MISSING
     input_window_length: int = MISSING
-    time_step: float = MISSING
 
     simulator: Any = MISSING
     assimilation_network: Any = MISSING

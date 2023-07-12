@@ -19,7 +19,6 @@ debug: false
 random_seed: 111
 
 assimilation_network_checkpoint: null
-time_step: 0.01
 rollout_length: 1
 input_window_length: 5
 
@@ -35,18 +34,21 @@ datamodule:
   num_workers: 10
   pin_memory: false
   dataset:
-    x_grid_size: 40
+    x_grid_size: 36
     y_grid_size: 10
-    time_step: ${time_step}
-    n_spin_up_steps: 300
+    time_step: 0.01
+    n_spin_up_steps: 500
     additional_noise_std: 1.0
-    n_masked_per_step: 30
+    n_masked_per_step: 27
     mask_fill_value: 0
     rollout_length: ${rollout_length}
     window_length: ${input_window_length}
   simulator:
     simulator_type: "two_level"
     forcing: 10
+    b: 10
+    c: 10
+    h: 1
     method: "rk4"
 
 loss:
