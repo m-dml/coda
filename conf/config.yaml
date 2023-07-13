@@ -4,7 +4,7 @@ defaults:
       - log_git_hash
   - simulator: l96_base
   - simulator/parametrization: null
-  - assimilation_network: unet_2d_1d
+  - assimilation_network: unet
   - datamodule: l96_observations
   - loss: 4dvar
   - lightning_module: data_assimilation_module
