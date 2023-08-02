@@ -1,248 +1,218 @@
 import os
-from typing import Union
 
+import h5py
 import hydra.utils
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as tnf
-from hydra.utils import instantiate
-from mdml_tools.simulators.lorenz96 import L96SimulatorOneLevel, L96SimulatorTwoLevel
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset
 
 
-class L96GenerativeDatasetBase(Dataset):
+class L96BaseDataset(Dataset):
+    """Base class for L96 datasets. Corrupting the ground truth data with additional noise and masking.
+
+    Args:
+        ground_truth_data (torch.Tensor): ground truth data. This tensor should have shape [1, time, x_grid_size]
+        additional_noise_std (float): standard deviation of additional noise.
+        mask_fraction (float): fraction of data to be masked.
+        mask_fill_value (float): value to fill masked data with.
+    """
+
     def __init__(
         self,
-        simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel, None] = None,
-        x_grid_size: int = 40,
-        y_grid_size: int = 10,
-        time_step: float = 0.01,
-        n_integration_steps: int = 500,
-        n_spin_up_steps: int = 300,
-        additional_noise_std: float = 0,
-        n_masked_per_step: int = 20,
-        mask_fill_value: int = 0,
-        save_dir: str = None,
-        load_dir: str = None,
+        ground_truth_data: torch.Tensor,
+        additional_noise_std: float,
+        mask_fraction: float,
+        mask_fill_value: float = 0.0,
+        path_to_save_data: str = None,
     ):
-        self.simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel] = simulator
-        self.x_grid_size = x_grid_size
-        self.y_grid_size = y_grid_size
-        self.time_step = time_step
-        self.n_integration_steps = n_integration_steps
-        self.n_spin_up_steps = n_spin_up_steps
         self.additional_noise_std = additional_noise_std
-        self.n_masked_per_step = n_masked_per_step
+        self.mask_fraction = mask_fraction
         self.mask_fill_value = mask_fill_value
-        self.save_dir = save_dir
-        self.load_dir = load_dir
 
-        if load_dir:
-            observations, mask, ground_truth = self.load_data()
-        else:
-            ground_truth = self.generate_simulation()
-            observations, mask = self.corrupt_simulation(ground_truth)
+        self.ground_truth = ground_truth_data
+        observations = self.apply_additional_noise(self.ground_truth)
+        self.observations, self.mask = self.apply_mask(observations)
 
-        self.data = torch.stack((observations, mask, ground_truth), dim=1)
-        self.n_time_steps = self.data.size(0)
+        if path_to_save_data is not None:
+            if not os.path.exists(path_to_save_data):
+                os.makedirs(path_to_save_data)
+            torch.save(self.ground_truth, os.path.join(path_to_save_data, "ground_truth.pt"))
+            torch.save(self.observations, os.path.join(path_to_save_data, "observations.pt"))
+            torch.save(self.mask, os.path.join(path_to_save_data, "mask.pt"))
 
-    def load_data(self) -> (torch.Tensor, torch.Tensor):
-        observations = torch.load(os.path.join(self.load_dir, "observations.pt"))
-        mask = torch.load(os.path.join(self.load_dir, "mask.pt"))
-        ground_truth = torch.load(os.path.join(self.load_dir, "ground_truth.pt"))
-        return observations, mask, ground_truth
-
-    def generate_simulation(self) -> torch.Tensor:
-        time_array = torch.arange(
-            0,
-            self.time_step * (self.n_spin_up_steps + self.n_integration_steps),
-            self.time_step,
-        )
-        x_shape = torch.Size((1, 1, self.x_grid_size))
-        x_init = self.simulator.forcing * (0.5 + torch.randn(x_shape, device="cpu") * 1.0)
-        if isinstance(self.simulator, L96SimulatorTwoLevel):
-            x_init = x_init / torch.tensor([self.y_grid_size, 50]).max()
-            y_shape = torch.Size((1, 1, self.x_grid_size, self.y_grid_size))
-            y_init = self.simulator.forcing * (0.5 + torch.randn(y_shape, device="cpu") * 1.0)
-            y_init = y_init / torch.tensor([self.y_grid_size, 50]).max()
-            ground_truth, _ = self.simulator.integrate(time_array, (x_init, y_init))
-        else:
-            ground_truth = self.simulator.integrate(time_array, x_init)
-        ground_truth = ground_truth[:, self.n_spin_up_steps :, :].squeeze()
-
-        if self.save_dir:
-            if not os.path.exists(self.save_dir):
-                os.makedirs(self.save_dir)
-            torch.save(ground_truth, os.path.join(self.save_dir, "ground_truth.pt"))
-            torch.save(time_array, os.path.join(self.save_dir, "time.pt"))
-
-        return ground_truth
-
-    def corrupt_simulation(self, ground_truth: torch.Tensor) -> (torch.Tensor, torch.Tensor):
-        simulation_size = ground_truth.size()
-        # additional noise
-        noise = torch.normal(mean=0, std=self.additional_noise_std, size=simulation_size, device="cpu")
+    def apply_additional_noise(self, ground_truth: torch.Tensor) -> torch.Tensor:
+        size = ground_truth.size()
+        noise = torch.normal(mean=0, std=self.additional_noise_std, size=size, device="cpu")
         observations = ground_truth + noise
-        # random mask
-        sample = torch.rand(simulation_size, device="cpu").topk(self.n_masked_per_step, dim=-1).indices
-        mask = torch.zeros(simulation_size, device="cpu", dtype=torch.bool)
+        return observations
+
+    def apply_mask(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+        size = observations.size()
+        n_masked_per_step = int(size[-1] * self.mask_fraction)
+        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices
+        mask = torch.zeros(size, device="cpu", dtype=torch.bool)
         mask.scatter_(dim=-1, index=sample, value=True)
         observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
         mask_inverse = torch.logical_not(mask).float()
-
-        if self.save_dir:
-            torch.save(noise, os.path.join(self.save_dir, "additional_noise.pt"))
-            torch.save(observations, os.path.join(self.save_dir, "observations.pt"))
-            torch.save(mask_inverse, os.path.join(self.save_dir, "mask.pt"))
         return observations, mask_inverse
 
 
-class L96Dataset(L96GenerativeDatasetBase):
+class L96TrainingDataset(L96BaseDataset):
+    """Data assimilation related training dataset for L96. This dataset can be used to train data assimilation model,
+    tune model parameters along data assimilation, and train a parametrization through data assimilation procedure.
+
+    - It uses only one trajectory of the L96 model.
+    - Edge samples where observations are not available are ignored.
+
+    Args:
+        rollout_length (int): number of steps through forward operator.
+        input_window_extend (int): half-length of neural network input. default: rollout_length
+        extend_channels (bool): whether to add additional channels to input tensor. default: True
+    """
+
     def __init__(
         self,
-        window_length: int,
         rollout_length: int,
-        drop_edge_cases: bool = True,
-        add_index_channel: bool = True,
-        inference_mode: bool = False,
-        *args,
+        input_window_extend: int = None,
+        extend_channels: bool = True,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
-        self._inference_mode = inference_mode
-        self.drop_edge_cases = drop_edge_cases
-        self.add_index_channel = add_index_channel
-        self.window_length = window_length
+        super().__init__(**kwargs)
         self.rollout_length = rollout_length
 
-        self.__pad_data_tensor_with_zeros()
-        self.sampling_indexes = self.__get_sampling_indexes()
+        self.window_extend = rollout_length
+        self.use_standard_input_window_extend = True
+        if input_window_extend is not None:
+            self.window_extend = input_window_extend
+            self.use_standard_input_window_extend = False
 
-    def __pad_data_tensor_with_zeros(self) -> None:
-        self.data = self.data.movedim(0, -1)
-        self.data = tnf.pad(self.data, (self.window_length, self.window_length + 1), mode="constant", value=0)
-        self.data = self.data.movedim(-1, 1)
+        self.extend_channels = extend_channels
 
-    def __get_sampling_indexes(self) -> torch.Tensor:
-        window_length = self.window_length
-        if self._inference_mode:
-            if self.drop_edge_cases:
-                return torch.arange(window_length, self.n_time_steps - window_length, step=1) + window_length
-            return torch.arange(0, self.n_time_steps, step=1) + self.window_length
-
-        if self.drop_edge_cases:
-            return torch.arange(0, self.n_time_steps - self.rollout_length - window_length, step=1) + window_length
-        return torch.arange(0, self.n_time_steps - self.rollout_length, step=1) + window_length
+        self.data = torch.concat([self.ground_truth, self.observations, self.ground_truth], dim=0)
+        self.n_time_steps = self.data.size(1)
+        if self.use_standard_input_window_extend:
+            end_point = self.n_time_steps - 3 * self.window_extend - 1
+            self.sampling_indexes = torch.arange(self.window_extend, end_point, step=1) + self.window_extend
+        else:
+            end_point = self.n_time_steps - 2 * self.window_extend - rollout_length - 1
+            self.sampling_indexes = torch.arange(self.window_extend, end_point, step=1) + self.window_extend
 
     def __len__(self):
         return len(self.sampling_indexes)
 
-    def add_channels_to_input(self, tensors: list[torch.Tensor]):
-        if len(tensors) == 0:
-            raise ValueError("list should contain at least one tensor")
-        example_tensor = tensors[0]
-        relative_indexes = torch.arange(-self.window_length, self.window_length + 1)
-        relative_indexes = relative_indexes.unsqueeze(-1).expand((1, example_tensor.size(1), example_tensor.size(-1)))
-        for i, tensor in enumerate(tensors):
-            index_mul_state = tensor[0, :, :] * relative_indexes.squeeze()
-            index_mul_state = index_mul_state.unsqueeze(0)
-            tensors[i] = torch.concat((tensor, relative_indexes, index_mul_state), dim=0)
-        return tensors
+    def add_channels_to_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
+        """Add several channels to input tensor."""
+        # define expand shape
+        expand_shape = tensor.size()
+        expand_shape = (1, expand_shape[-2], expand_shape[-1])
+
+        # generate data for new channels
+        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1)
+        relative_indexes = relative_indexes.unsqueeze(-1).expand(expand_shape)
+        relative_indexes_mul_state = tensor[0, :, :] * relative_indexes
+        tensor = torch.cat((tensor, relative_indexes, relative_indexes_mul_state), dim=0)
+        return tensor
 
     def __getitem__(self, index: int):
-        start = self.sampling_indexes[index]
-        end = start + self.rollout_length + 1
+        start_index = self.sampling_indexes[index]
+        end_index = start_index + self.rollout_length + 1
 
-        # training variables
-        observations_data = self.data[0, start:end]
-        observations_mask = self.data[1, start:end].bool()
-        # neural network input
-        feed_forward_left = self.data[:2, start - self.window_length : start + self.window_length + 1]
-        feed_forward_right = self.data[:2, end - self.window_length : end + self.window_length + 1]
-        if self.add_index_channel:
-            feed_forward_left, feed_forward_right = self.add_channels_to_input([feed_forward_left, feed_forward_right])
+        # variables to calculate missmatch between observations and rollout
+        rollout_data = self.data[1, start_index:end_index]
+        rollout_mask = self.data[2, start_index:end_index]
 
-        # metrics variables
-        ground_truth_data = self.data[2, start:end]
-        true_state_left = self.data[2, start]
-        true_state_right = self.data[2, end]
+        # data assimilation network input
+        feed_forward_start = self.data[1:, start_index - self.window_extend : start_index + self.window_extend + 1]
+        feed_forward_end = self.data[1:, end_index - self.window_extend : end_index + self.window_extend + 1]
+
+        if self.extend_channels:
+            feed_forward_start = self.add_channels_to_tensor(feed_forward_start)
+            feed_forward_end = self.add_channels_to_tensor(feed_forward_end)
+
+        # extra variables to calculate metrics during training
+        ground_truth_data = self.data[0, start_index:end_index]
+        true_state_start = self.data[0, start_index]
+        true_state_end = self.data[0, end_index]
 
         return (
-            observations_data,
-            observations_mask,
-            feed_forward_left,
-            feed_forward_right,
+            rollout_data,
+            rollout_mask,
+            feed_forward_start,
+            feed_forward_end,
             ground_truth_data,
-            true_state_left,
-            true_state_right,
+            true_state_start,
+            true_state_end,
         )
 
 
-class L96InferenceDataset(L96Dataset):
-    def __init__(self, *args, **kwargs):
-        super().__init__(inference_mode=True, rollout_length=1, *args, **kwargs)
-        self.ground_truth = self.data[2, self.sampling_indexes]
+class L96InferenceDataset(L96BaseDataset):
+    def __init__(
+        self,
+        input_window_extend: int,
+        extend_channels: bool = True,
+        drop_edge_samples: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.window_extend = input_window_extend
+        self.extend_channels = extend_channels
+        self.drop_edge_samples = drop_edge_samples
+
+        self.data = torch.stack([self.ground_truth, self.observations, self.ground_truth], dim=1)
+        self.n_time_steps = self.data.size(-2)
+        self.zeros_padding_data_tensors()
+        self.sampling_indexes = self.get_sampling_indexes()
 
     def __len__(self):
         return len(self.sampling_indexes)
 
-    def __getitem__(self, index: int):
+    def zeros_padding_data_tensors(self) -> None:
+        self.data = self.data.movedim(-2, -1)
+        self.data = tnf.pad(self.data, (self.window_extend, self.window_extend + 1), mode="constant", value=0)
+        self.data = self.data.movedim(-1, -2)
+
+    def get_sampling_indexes(self) -> torch.Tensor:
+        if self.drop_edge_samples:
+            end_point = self.n_time_steps - 3 * self.window_extend
+            sampling_indexes = torch.arange(self.window_extend, end_point, step=1) + self.window_extend
+        else:
+            sampling_indexes = torch.arange(0, self.n_time_steps, step=1) + self.window_extend
+        return sampling_indexes
+
+    def add_channels_to_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
+        """Add several channels to input tensor."""
+        # define expand shape
+        expand_shape = tensor.size()
+        expand_shape = (expand_shape[0], 1, expand_shape[-2], expand_shape[-1])
+
+        # generate data for new channels
+        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1)
+        relative_indexes = relative_indexes.unsqueeze(-1).expand(expand_shape)
+        relative_indexes_mul_state = tensor[..., 0, :, :].unsqueeze(1) * relative_indexes
+
+        # concatenate new channels with input tensor
+        tensor = torch.cat((tensor, relative_indexes, relative_indexes_mul_state), dim=1)
+
+        return tensor
+
+    def __getitem__(self, index: int) -> torch.Tensor:
         state_index = self.sampling_indexes[index]
-
-        feed_forward = self.data[:2, state_index - self.window_length : state_index + self.window_length + 1]
-        if self.add_index_channel:
-            feed_forward = self.add_channels_to_input([feed_forward]).pop()
-
+        feed_forward = self.data[:, 1:, state_index - self.window_extend : state_index + self.window_extend + 1]
+        if self.extend_channels:
+            feed_forward = self.add_channels_to_tensor(feed_forward)
+        if feed_forward.size(0) == 1:
+            feed_forward = feed_forward.squeeze(0)
         return feed_forward
-
-
-#
-# class L96InferenceDataset(L96DatasetBase):
-#     def __init__(
-#             self,
-#             window_length: int,
-#             drop_edge_cases: bool = True,
-#             *args,
-#             **kwargs,
-#     ):
-#         super().__init__(*args, **kwargs)
-#         self.window_length = window_length
-#         self.drop_edge_cases = drop_edge_cases
-#
-#         self.data = self.data.movedim(0, -1)
-#         self.data = tnf.pad(self.data, (window_length, window_length + 1), mode="constant", value=0)
-#         self.data = self.data.movedim(-1, 1)
-#
-#         if drop_edge_cases:
-#             self.rollout_starting_index = torch.arange(
-#             self.window_length, self.n_time_steps-self.window_length, step=1
-#             ) + self.window_length
-#         else:
-#             self.rollout_starting_index = torch.arange(0, self.n_time_steps, step=1) + self.window_length
-#
-#     @property
-#     def ground_truth(self):
-#         return self.data[-1, self.rollout_starting_index]
-#
-#     def __len__(self):
-#         return len(self.rollout_starting_index)
-#
-#     def __getitem__(self, index: int):
-#         ic_index = self.rollout_starting_index[index]
-#         start = ic_index - self.window_length
-#         end = ic_index + self.window_length + 1
-#         return self.data[:2, start:end]
 
 
 class L96DataLoader(pl.LightningDataModule):
     def __init__(
         self,
         dataset: DictConfig,
-        simulator: DictConfig,
-        save_training_data_dir: str = None,
-        load_training_data_dir: str = None,
-        data_amount: int = 12000,
+        path_to_load_data: str,
+        path_to_save_data: str = None,
         train_validation_split: float = 0.75,
         shuffle_train: bool = True,
         shuffle_valid: bool = False,
@@ -253,10 +223,8 @@ class L96DataLoader(pl.LightningDataModule):
     ):
         super().__init__()
         self.dataset = dataset
-        self.simulator: Union[L96SimulatorOneLevel, L96SimulatorTwoLevel] = instantiate(simulator)
-        self.save_training_data_dir = save_training_data_dir
-        self.load_training_data_dir = load_training_data_dir
-        self.data_amount = data_amount
+        self.path_to_load_data = path_to_load_data
+        self.path_to_save_data = path_to_save_data
         self.train_validation_split = train_validation_split
         self.shuffle_train = shuffle_train
         self.shuffle_valid = shuffle_valid
@@ -266,19 +234,20 @@ class L96DataLoader(pl.LightningDataModule):
         self.pin_memory = pin_memory
 
     def setup(self, **kwargs) -> None:
+        with h5py.File(self.path_to_load_data, "r") as file:
+            simulation = torch.from_numpy(file["first_level"][:])
+            training_split = int(simulation.size(1) * self.train_validation_split)
+
         self.train_data: Dataset = hydra.utils.instantiate(
             self.dataset,
-            n_integration_steps=int(self.data_amount * self.train_validation_split),
-            simulator=self.simulator,
-            save_dir=os.path.join(self.save_training_data_dir, "train") if self.save_training_data_dir else None,
-            load_dir=os.path.join(self.load_training_data_dir, "train") if self.load_training_data_dir else None,
+            ground_truth_data=simulation[:, :training_split, :],
+            path_to_save_data=os.path.join(self.path_to_save_data, "train") if self.path_to_save_data else None,
         )
+
         self.valid_data: Dataset = hydra.utils.instantiate(
             self.dataset,
-            n_integration_steps=int(self.data_amount * (1 - self.train_validation_split)),
-            simulator=self.simulator,
-            save_dir=os.path.join(self.save_training_data_dir, "valid") if self.save_training_data_dir else None,
-            load_dir=os.path.join(self.load_training_data_dir, "valid") if self.load_training_data_dir else None,
+            ground_truth_data=simulation[:, training_split:, :],
+            path_to_save_data=os.path.join(self.path_to_save_data, "valid") if self.path_to_save_data else None,
         )
 
     def train_dataloader(self) -> DataLoader:

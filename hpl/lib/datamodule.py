@@ -3,59 +3,36 @@ from typing import Any
 
 
 @dataclass
-class L96Dataset:
-    _target_: str = "hpl.datamodule.DataLoader.L96Dataset"
-    simulator: Any = None
-    x_grid_size: int = 40
-    y_grid_size: int = 10
-    time_step: float = 0.01
-    n_integration_steps: int = 500
-    n_spin_up_steps: int = 300
-    additional_noise_std: float = 0
-    n_masked_per_step: int = 20
-    mask_fill_value: int = 0
-    save_dir: Any = None
-    load_dir: Any = None
-    rollout_length: int = 25
-    window_length: int = 15
-    drop_edge_cases: bool = True
-    add_index_channel: bool = True
-    inference_mode: bool = False
+class L96BaseDataset:
+    additional_noise_std: float
+    mask_fraction: float
+    mask_fill_value: float = 0.0
+    path_to_save_data: str = None
 
 
 @dataclass
-class L96InferenceDataset:
-    _target_: str = "hpl.datamodule.DataLoader.L96InferenceDataset"
-    window_length: int = 15
-    drop_edge_cases: bool = True
-    add_index_channel: bool = True
-    inference_mode: bool = False
-    simulator: Any = None
-    x_grid_size: int = 40
-    y_grid_size: int = 10
-    time_step: float = 0.01
-    n_integration_steps: int = 500
-    n_spin_up_steps: int = 300
-    additional_noise_std: float = 0
-    n_masked_per_step: int = 20
-    mask_fill_value: int = 0
-    save_dir: Any = None
-    load_dir: Any = None
+class L96TrainingDataset(L96BaseDataset):
+    rollout_length: int = 1
+    input_window_extend: int = None
+    extend_channels: bool = True
 
 
 @dataclass
-class L96DataModule:
-    _target_: str = "hpl.datamodule.DataLoader.L96DataLoader"
-    _recursive_: bool = False
-    dataset: Any = None
-    simulator: Any = None
-    save_training_data_dir: Any = None
-    load_training_data_dir: Any = None
-    data_amount: int = 12000
+class L96InferenceDataset(L96BaseDataset):
+    input_window_extend: int = 10
+    extend_channels: bool = True
+    drop_edge_samples: bool = True
+
+
+@dataclass
+class L96DataLoader:
+    dataset: Any
+    path_to_load_data: str
+    path_to_save_data: Any = None
     train_validation_split: float = 0.75
     shuffle_train: bool = True
     shuffle_valid: bool = False
-    batch_size: int = 32
+    batch_size: int = 1
     drop_last_batch: bool = False
-    num_workers: int = 10
+    num_workers: int = 0
     pin_memory: bool = False

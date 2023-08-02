@@ -5,7 +5,7 @@ defaults:
   - simulator: l96_base
   - simulator/parametrization: null
   - assimilation_network: unet
-  - datamodule: l96_observations
+  - datamodule: l96_dataset_one_level
   - loss: 4dvar
   - lightning_module: data_assimilation_module
   - optimizer/data_assimilation: adam_base

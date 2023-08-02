@@ -32,6 +32,7 @@ dependencies:
   - tqdm
   - pylint
   - setuptools_scm
+  - h5py
   - pip:
       - torch-tb-profiler
       - hydra-colorlog

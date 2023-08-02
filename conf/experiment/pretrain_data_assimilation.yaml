@@ -3,7 +3,7 @@ defaults:
   - override /simulator: l96_base
   - override /assimilation_network: unet
   - override /loss: 4dvar
-  - override /datamodule: l96_observations
+  - override /datamodule: l96_dataset_two_level
   - override /lightning_module: data_assimilation_module
   - override /optimizer/data_assimilation: adam_base
   - override /lightning_trainer: trainer_base
@@ -21,38 +21,21 @@ random_seed: 111
 assimilation_network_checkpoint: null
 time_step: 0.01
 rollout_length: 10
-input_window_length: 10
+input_window_extend: 10
 
 datamodule:
-  save_training_data_dir: "data"
-  load_training_data_dir: null
-  data_amount: 32000
-  train_validation_split: 0.8
+  path_to_save_data: null
+  train_validation_split: 0.75
   shuffle_train: true
   shuffle_valid: false
-  batch_size: 32
+  batch_size: 1
   drop_last_batch: true
-  num_workers: 10
+  num_workers: 0
   pin_memory: false
   dataset:
-    x_grid_size: 36
-    y_grid_size: 10
-    time_step: ${time_step}
-    n_spin_up_steps: 500
-    additional_noise_std: 1.0
-    n_masked_per_step: 27
-    mask_fill_value: 0
     rollout_length: ${rollout_length}
-    window_length: ${input_window_length}
-    drop_edge_cases: false
-    add_index_channel: true
-  simulator:
-    simulator_type: "two_level"
-    forcing: 10
-    b: 10
-    c: 10
-    h: 1
-    method: "rk4"
+    input_window_extend: ${input_window_extend}
+    extend_channels: true
 
 loss:
   alpha: 1.0

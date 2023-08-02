@@ -4,7 +4,7 @@ from typing import Any
 from hydra.conf import ConfigStore, MISSING
 from mdml_tools.utils import add_hydra_models_to_config_store
 
-from hpl.lib.datamodule import L96DataModule, L96Dataset, L96InferenceDataset
+from hpl.lib.datamodule import L96DataLoader, L96InferenceDataset, L96TrainingDataset
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule, ParametrizationLearningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import FullyConvolutionalNetwork, L96Parametrized
@@ -85,11 +85,9 @@ def register_configs() -> None:
     cs.store(name="parametrization_learning_module", node=ParametrizationLearningModule, group="lightning_module")
 
     # datamodule:
-    cs.store(name="l96_datamodule_base", node=L96DataModule, group="datamodule")
-    cs.store(name="l96_dataset_base", node=L96Dataset, group="datamodule/dataset")
-    cs.store(name="l96_dataset_base", node=L96Dataset, group="dataset")
+    cs.store(name="l96_datamodule_base", node=L96DataLoader, group="datamodule")
+    cs.store(name="l96_training_dataset_base", node=L96TrainingDataset, group="datamodule/dataset")
     cs.store(name="l96_inference_dataset_base", node=L96InferenceDataset, group="datamodule/dataset")
-    cs.store(name="l96_inference_dataset_base", node=L96InferenceDataset, group="dataset")
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)
@@ -103,7 +101,7 @@ class Config:
     debug: bool = False
     time_step: float = MISSING
     rollout_length: int = MISSING
-    input_window_length: int = MISSING
+    input_window_extend: int = MISSING
 
     simulator: Any = MISSING
     assimilation_network: Any = MISSING
