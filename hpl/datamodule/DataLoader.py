@@ -90,7 +90,7 @@ class L96TrainingDataset(L96BaseDataset):
 
         self.extend_channels = extend_channels
 
-        self.data = torch.concat([self.ground_truth, self.observations, self.ground_truth], dim=0)
+        self.data = torch.concat([self.ground_truth, self.observations, self.mask], dim=0)
         self.n_time_steps = self.data.size(1)
         if self.use_standard_input_window_extend:
             end_point = self.n_time_steps - 3 * self.window_extend - 1
@@ -121,7 +121,7 @@ class L96TrainingDataset(L96BaseDataset):
 
         # variables to calculate missmatch between observations and rollout
         rollout_data = self.data[1, start_index:end_index]
-        rollout_mask = self.data[2, start_index:end_index]
+        rollout_mask = self.data[2, start_index:end_index].bool()
 
         # data assimilation network input
         feed_forward_start = self.data[1:, start_index - self.window_extend : start_index + self.window_extend + 1]
@@ -160,9 +160,9 @@ class L96InferenceDataset(L96BaseDataset):
         self.extend_channels = extend_channels
         self.drop_edge_samples = drop_edge_samples
 
-        self.data = torch.stack([self.ground_truth, self.observations, self.ground_truth], dim=1)
-        self.n_time_steps = self.data.size(-2)
+        self.data = torch.stack([self.ground_truth, self.observations, self.mask], dim=1)
         self.zeros_padding_data_tensors()
+        self.n_time_steps = self.data.size(-2)
         self.sampling_indexes = self.get_sampling_indexes()
 
     def __len__(self):
@@ -178,7 +178,8 @@ class L96InferenceDataset(L96BaseDataset):
             end_point = self.n_time_steps - 3 * self.window_extend
             sampling_indexes = torch.arange(self.window_extend, end_point, step=1) + self.window_extend
         else:
-            sampling_indexes = torch.arange(0, self.n_time_steps, step=1) + self.window_extend
+            end_point = self.n_time_steps - 2 * self.window_extend - 1
+            sampling_indexes = torch.arange(0, end_point, step=1) + self.window_extend
         return sampling_indexes
 
     def add_channels_to_tensor(self, tensor: torch.Tensor) -> torch.Tensor:

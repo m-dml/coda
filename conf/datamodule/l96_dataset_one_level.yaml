@@ -5,10 +5,10 @@ defaults:
 
 path_to_load_data: "/home/vadim/Dev/hidden-process-learning/data/training/lorenz-one_level-grid_40-forcing_8.0-dt_0.01-rk4.h5"
 path_to_save_data: null
-train_validation_split: 0.75
+train_validation_split: 0.8
 shuffle_train: true
 shuffle_valid: false
-batch_size: 1
+batch_size: 32
 drop_last_batch: true
 num_workers: 0
 pin_memory: false
@@ -17,3 +17,6 @@ dataset:
   rollout_length: 1
   input_window_extend: 10
   extend_channels: true
+  additional_noise_std: 1.0
+  mask_fraction: 0.75
+  mask_fill_value: 0.0

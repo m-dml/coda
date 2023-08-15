@@ -6,14 +6,14 @@ defaults:
   - encoder/block/pooling: max_pool2d_base
   - encoder/block/batch_norm: null
   - encoder/block/dropout: null
-  - encoder/block/activation: relu_base
+  - encoder/block/activation: re_lu_base
   - decoder: conv_decoder_base
   - decoder/block: conv_block_decoding_base
   - decoder/block/convolution: conv1d_base
   - decoder/block/upscale: conv_transpose1d_base
   - decoder/block/batch_norm: null
   - decoder/block/dropout: null
-  - decoder/block/activation: relu_base
+  - decoder/block/activation: re_lu_base
   - global_pool: global_max_pool_base
   - output_convolution: conv1d_base
 
