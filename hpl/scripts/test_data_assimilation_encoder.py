@@ -1,12 +1,9 @@
 import argparse
 import os
-import sys
-
-# make hpl module visible
-from pathlib import Path
 
 import h5py
 import numpy as np
+import submitit
 import torch
 from joblib import delayed, Parallel
 from mdml_tools.utils import logging as mdml_logging
@@ -15,8 +12,7 @@ from tqdm import tqdm
 
 from hpl.datamodule import L96InferenceDataset
 
-path_root = Path(__file__).parents[2]
-sys.path.append(str(path_root))
+# make hpl module visible
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -66,6 +62,8 @@ def create_parser() -> argparse.ArgumentParser:
         default="cpu",
         help="Device to use for generating the data. Can be any " "string that is accepted by torch.device().",
     )
+    parser.add_argument("--slurm-partition", type=str, help="Slurm partition to submit a job.", default="")
+    parser.add_argument("--timeout-min", type=int, help="Slurm job parameter.", default=3600)
 
     return parser
 
@@ -183,13 +181,28 @@ def test_mesh(args: argparse.Namespace):
     mask_fraction_values = torch.linspace(args.mask_fraction_min, args.mask_fraction_max, args.mesh_steps)
     noise_std_mesh, mask_fraction_mesh = torch.meshgrid(noise_std_values, mask_fraction_values)
     settings = [(a.item(), b.item()) for a, b in zip(noise_std_mesh.flatten(), mask_fraction_mesh.flatten())]
-    Parallel(n_jobs=args.n_jobs, verbose=True)(delayed(test_single_case)(args, a, b, False) for a, b in tqdm(settings))
+    Parallel(n_jobs=args.n_jobs)(delayed(test_single_case)(args, a, b, False) for a, b in tqdm(settings))
 
 
 if __name__ == "__main__":
+    logger = mdml_logging.get_logger()
+
+    logger.info("Instantiate parser")
     _parser = create_parser()
+    logger.info("Parse arguments provided to the script")
     parsed_args = parse_args(_parser)
-    if parsed_args.n_jobs == 1:
-        test_single_case(parsed_args)
+
+    if len(parsed_args.slurm_partition) > 0:
+        executor = submitit.AutoExecutor(folder=parsed_args.output_dir)
+        executor.update_parameters(timeout_min=parsed_args.timeout_min, slurm_partition=parsed_args.slurm_partition)
+        if parsed_args.n_jobs == 1:
+            job = executor.submit(test_single_case, parsed_args)
+        else:
+            job = executor.submit(test_mesh, parsed_args)
+        logger.info("Job was submitted")
+        output = job.result()
     else:
-        test_mesh(parsed_args)
+        if parsed_args.n_jobs == 1:
+            test_single_case(parsed_args)
+        else:
+            test_mesh(parsed_args)
