@@ -29,7 +29,6 @@ datamodule:
   shuffle_valid: false
   batch_size: 32
   drop_last_batch: true
-  num_workers: 0
   pin_memory: false
   dataset:
     rollout_length: ${rollout_length}
