@@ -58,6 +58,11 @@ class L96BaseDataset(Dataset):
         mask_inverse = torch.logical_not(mask).float()
         return observations, mask_inverse
 
+    def to(self, device: str):
+        self.ground_truth = self.ground_truth.to(device)
+        self.observations = self.observations.to(device)
+        self.mask = self.mask.to(device)
+
 
 class L96TrainingDataset(L96BaseDataset):
     """Data assimilation related training dataset for L96. This dataset can be used to train data assimilation model,
@@ -165,7 +170,6 @@ class L96InferenceDataset(L96BaseDataset):
         self.zeros_padding_data_tensors()
         self.n_time_steps = self.data.size(-2)
         self.sampling_indexes = self.get_sampling_indexes()
-        self.device = self.ground_truth.device
 
     def __len__(self):
         return len(self.sampling_indexes)

@@ -111,7 +111,6 @@ def load_test_simulations(args: argparse.Namespace) -> torch.Tensor:
         else:
             args.n_simulations = len(file["first_level"])
             data = torch.from_numpy(file["first_level"][:])
-        data = data.to(args.device)
     return data
 
 
@@ -150,6 +149,7 @@ def test_single_case(args: argparse.Namespace, noise_std: float = None, mask_fra
         additional_noise_std=noise_std,
         drop_edge_samples=args.ignore_edges,
     )
+    dataset.to(args.device)
 
     with h5py.File(output_file, "w") as f:
         logger.info("Saving Metadata to hdf5 file.")
