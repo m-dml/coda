@@ -58,11 +58,6 @@ class L96BaseDataset(Dataset):
         mask_inverse = torch.logical_not(mask).float()
         return observations, mask_inverse
 
-    def to(self, device: str):
-        self.ground_truth = self.ground_truth.to(device)
-        self.observations = self.observations.to(device)
-        self.mask = self.mask.to(device)
-
 
 class L96TrainingDataset(L96BaseDataset):
     """Data assimilation related training dataset for L96. This dataset can be used to train data assimilation model,
@@ -212,6 +207,9 @@ class L96InferenceDataset(L96BaseDataset):
         if feed_forward.size(0) == 1:
             feed_forward = feed_forward.squeeze(0)
         return feed_forward
+
+    def to(self, device: str) -> None:
+        self.data = self.data.to(device)
 
 
 class L96DataLoader(pl.LightningDataModule):
