@@ -153,6 +153,7 @@ class L96InferenceDataset(L96BaseDataset):
         input_window_extend: int,
         extend_channels: bool = True,
         drop_edge_samples: bool = True,
+        device: str = "cpu",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -164,6 +165,7 @@ class L96InferenceDataset(L96BaseDataset):
         self.zeros_padding_data_tensors()
         self.n_time_steps = self.data.size(-2)
         self.sampling_indexes = self.get_sampling_indexes()
+        self.device = self.ground_truth.device
 
     def __len__(self):
         return len(self.sampling_indexes)
@@ -189,7 +191,7 @@ class L96InferenceDataset(L96BaseDataset):
         expand_shape = (expand_shape[0], 1, expand_shape[-2], expand_shape[-1])
 
         # generate data for new channels
-        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1)
+        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1, device=self.device)
         relative_indexes = relative_indexes.unsqueeze(-1).expand(expand_shape)
         relative_indexes_mul_state = tensor[..., 0, :, :].unsqueeze(1) * relative_indexes
 

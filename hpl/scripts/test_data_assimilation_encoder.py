@@ -102,7 +102,7 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
     return args
 
 
-def load_simulations(args: argparse.Namespace) -> torch.Tensor:
+def load_test_simulations(args: argparse.Namespace) -> torch.Tensor:
     with h5py.File(args.data_path, "r") as file:
         if args.n_simulations:
             if args.n_simulations > len(file["first_level"]):
@@ -111,16 +111,17 @@ def load_simulations(args: argparse.Namespace) -> torch.Tensor:
         else:
             args.n_simulations = len(file["first_level"])
             data = torch.from_numpy(file["first_level"][:])
+        data = data.to(args.device)
     return data
 
 
-def load_model(args: argparse.Namespace) -> torch.nn.Module:
+def load_data_assimilation_network(args: argparse.Namespace) -> torch.nn.Module:
     path_to_checkpoint = os.path.join(args.experiment_dir, "logs/checkpoints/assimilation_network.ckpt")
     model = torch.load(path_to_checkpoint, map_location=args.device)
     return model
 
 
-def load_config(args: argparse.Namespace) -> DictConfig:
+def load_hydra_config(args: argparse.Namespace) -> DictConfig:
     path_to_config = os.path.join(args.experiment_dir, ".hydra/config.yaml")
     config = OmegaConf.load(path_to_config)
     return config
@@ -137,9 +138,9 @@ def test_single_case(args: argparse.Namespace, noise_std: float = None, mask_fra
         args.output_dir, f"lorenz96-sigma_{round(noise_std, 2)}-mask_{round(mask_fraction, 2)}-reconstruction.h5"
     )
 
-    data = load_simulations(args)
-    model = load_model(args)
-    config = load_config(args)
+    data = load_test_simulations(args)
+    model = load_data_assimilation_network(args)
+    config = load_hydra_config(args)
     input_window_extend = config.datamodule.dataset.input_window_extend
 
     dataset = L96InferenceDataset(
