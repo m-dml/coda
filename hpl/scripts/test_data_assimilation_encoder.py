@@ -7,10 +7,11 @@ import submitit
 import torch
 from joblib import delayed, Parallel
 from mdml_tools.utils import logging as mdml_logging
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from tqdm import tqdm
 
 from hpl.datamodule import L96InferenceDataset
+from hpl.utils.postprocessing import load_data_assimilation_network, load_hydra_config, load_test_simulations
 
 # make hpl module visible
 
@@ -102,27 +103,19 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
     return args
 
 
-def load_test_simulations(args: argparse.Namespace) -> torch.Tensor:
-    with h5py.File(args.data_path, "r") as file:
-        if args.n_simulations:
-            if args.n_simulations > len(file["first_level"]):
-                raise ValueError("Number of simulations is higher than are in provided file.")
-            data = torch.from_numpy(file["first_level"][: args.n_simulations])
-        else:
-            args.n_simulations = len(file["first_level"])
-            data = torch.from_numpy(file["first_level"][:])
+def load_test_data(args: argparse.Namespace) -> torch.Tensor:
+    data = load_test_simulations(args.data_path, args.n_simulations)
+    args.n_simulations = data.size(0)
     return data
 
 
-def load_data_assimilation_network(args: argparse.Namespace) -> torch.nn.Module:
-    path_to_checkpoint = os.path.join(args.experiment_dir, "logs/checkpoints/assimilation_network.ckpt")
-    model = torch.load(path_to_checkpoint, map_location=args.device)
+def load_model_from_checkpoint(args: argparse.Namespace) -> torch.nn.Module:
+    model = load_data_assimilation_network(args.experiment_dir, args.device)
     return model
 
 
-def load_hydra_config(args: argparse.Namespace) -> DictConfig:
-    path_to_config = os.path.join(args.experiment_dir, ".hydra/config.yaml")
-    config = OmegaConf.load(path_to_config)
+def load_configuration_file(args: argparse.Namespace) -> DictConfig:
+    config = load_hydra_config(args.experiment_dir)
     return config
 
 
@@ -137,9 +130,9 @@ def test_single_case(args: argparse.Namespace, noise_std: float = None, mask_fra
         args.output_dir, f"lorenz96-sigma_{round(noise_std, 2)}-mask_{round(mask_fraction, 2)}-reconstruction.h5"
     )
 
-    data = load_test_simulations(args)
-    model = load_data_assimilation_network(args)
-    config = load_hydra_config(args)
+    data = load_test_data(args)
+    model = load_model_from_checkpoint(args)
+    config = load_configuration_file(args)
     input_window_extend = config.datamodule.dataset.input_window_extend
 
     dataset = L96InferenceDataset(
