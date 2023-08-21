@@ -195,7 +195,7 @@ class L96InferenceDataset(L96BaseDataset):
         expand_shape = (expand_shape[0], 1, expand_shape[-2], expand_shape[-1])
 
         # generate data for new channels
-        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1, device=self.device)
+        relative_indexes = torch.arange(-self.window_extend, self.window_extend + 1, device=tensor.device)
         relative_indexes = relative_indexes.unsqueeze(-1).expand(expand_shape)
         relative_indexes_mul_state = tensor[..., 0, :, :].unsqueeze(1) * relative_indexes
 
