@@ -8,7 +8,6 @@ defaults:
   - override /optimizer/data_assimilation: adam_base
   - override /optimizer/parametrization: adam_base
   - override /lightning_trainer: trainer_base
-  - override /lightning_logger/tensorboard: tensorboard_logger_base
   - override /lightning_callback/model_checkpoint: model_checkpoint_base
   - override /lightning_callback/early_stopping: early_stopping_base
 
@@ -59,14 +58,9 @@ lightning_trainer:
   deterministic: false
 
 lightning_logger:
-  tensorboard:
+  tensor_board_logger:
     default_hp_metric: false
-    log_graph: false
-    name: null
-    prefix: ""
-    save_dir: "./logs/tensorboard"
-    sub_dir: null
-    version: null
+    save_dir: "./logs"
 
 lightning_callback:
   early_stopping:
