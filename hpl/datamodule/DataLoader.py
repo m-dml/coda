@@ -153,7 +153,6 @@ class L96InferenceDataset(L96BaseDataset):
         input_window_extend: int,
         extend_channels: bool = True,
         drop_edge_samples: bool = True,
-        device: str = "cpu",
         **kwargs,
     ):
         super().__init__(**kwargs)
