@@ -17,6 +17,7 @@ Example:
 """
 import argparse
 import os
+from copy import deepcopy
 from datetime import datetime
 
 import h5py
@@ -244,35 +245,36 @@ def test_single_model(
         progress_bar (bool): if True, a progress bar is shown.
     """
     logger = mdml_logging.get_logger()
-
-    args.experiment_dir = directory if directory else args.experiment_dir
-    noise_std = noise_std if noise_std else args.noise_std
-    mask_fraction = mask_fraction if mask_fraction else args.mask_fraction
+    arguments = deepcopy(args)
+    arguments.experiment_dir = directory if directory else arguments.experiment_dir
+    arguments.noise_std = noise_std if noise_std else arguments.noise_std
+    arguments.mask_fraction = mask_fraction if mask_fraction else arguments.mask_fraction
     output_file = os.path.join(
-        args.output_dir, f"lorenz96-sigma_{round(noise_std, 2)}-mask_{round(mask_fraction, 2)}-reconstruction.h5"
+        arguments.output_dir,
+        f"lorenz96-sigma_{round(arguments.noise_std, 2)}-mask_{round(arguments.mask_fraction, 2)}-reconstruction.h5",
     )
 
-    config = load_hydra_config(args.experiment_dir)
-    model = load_data_assimilation_network(args.experiment_dir, args.device)
-    simulations = load_test_data(args)
+    config = load_hydra_config(arguments.experiment_dir)
+    model = load_data_assimilation_network(arguments.experiment_dir, arguments.device)
+    simulations = load_test_data(arguments)
     dataset = L96InferenceDataset(
         ground_truth_data=simulations,
         input_window_extend=config.datamodule.dataset.input_window_extend,
-        mask_fraction=mask_fraction,
-        additional_noise_std=noise_std,
-        drop_edge_samples=args.ignore_edges,
+        mask_fraction=arguments.mask_fraction,
+        additional_noise_std=arguments.noise_std,
+        drop_edge_samples=arguments.ignore_edges,
     )
-    dataset.to(args.device)
+    dataset.to(arguments.device)
 
     with h5py.File(output_file, "w") as f:
         logger.info("Saving Metadata to hdf5 file.")
         # save metadata:
-        for k, v in vars(args).items():
+        for k, v in vars(arguments).items():
             f.attrs[k] = v
 
         f.create_dataset(
             "reconstruction",
-            shape=(args.n_simulations, len(dataset), simulations.size(-1)),
+            shape=(arguments.n_simulations, len(dataset), simulations.size(-1)),
             dtype=np.float32,
         )
 
@@ -324,8 +326,16 @@ def test_multiple_models(args: argparse.Namespace):
     """
     mdml_logging.get_logger()
     directories = search_valid_experiments(args)
+
+    setup = []
+    for i, directory in enumerate(directories):
+        arguments = deepcopy(args)
+        arguments.output_dir = os.path.join(arguments.output_dir, str(i))
+        os.makedirs(arguments.output_dir, exist_ok=True)
+        setup.append((arguments, directory))
+
     Parallel(n_jobs=args.n_jobs)(
-        delayed(test_single_model)(args, directory, None, None, False) for directory in tqdm(directories)
+        delayed(test_single_model)(arguments, directory, None, None, False) for arguments, directory in tqdm(setup)
     )
 
 
@@ -342,7 +352,10 @@ def mesh_test_multiple_models(args: argparse.Namespace):
     mdml_logging.get_logger()
     directories = search_valid_experiments(args)
 
-    executor = submitit.AutoExecutor(folder=args.output_dir)
+    submitit_dir = os.path.join(args.output_dir, ".submitit")
+    os.makedirs(submitit_dir, exist_ok=True)
+
+    executor = submitit.AutoExecutor(folder=submitit_dir)
     executor.update_parameters(
         slurm_array_parallelism=args.slurm_array_parallelism,
         timeout_min=args.timeout_min,
@@ -351,8 +364,11 @@ def mesh_test_multiple_models(args: argparse.Namespace):
 
     jobs = []
     with executor.batch():
-        for directory in directories:
-            job = executor.submit(mesh_test_single_model, args, directory)
+        for i, directory in enumerate(directories):
+            arguments = deepcopy(args)
+            arguments.output_dir = os.path.join(arguments.output_dir, str(i))
+            os.makedirs(arguments.output_dir, exist_ok=True)
+            job = executor.submit(mesh_test_single_model, arguments, directory)
             jobs.append(job)
 
 
@@ -360,6 +376,7 @@ if __name__ == "__main__":
     parser = create_parser()
     parsed_args = parse_args(parser)
 
+    # create output directory
     timestamp = datetime.now().strftime("%Y-%d-%m-%H-%M")
     parsed_args.output_dir = os.path.join(parsed_args.output_dir, timestamp)
     os.makedirs(parsed_args.output_dir, exist_ok=True)
