@@ -383,6 +383,7 @@ if __name__ == "__main__":
     executor.update_parameters(
         timeout_min=parsed_args.timeout_min,
         slurm_partition=parsed_args.slurm_partition,
+        additional_parameters=dict(exclusive=True),
     )
 
     if parsed_args.experiment_dir:
