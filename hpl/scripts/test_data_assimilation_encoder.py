@@ -64,6 +64,7 @@ def create_parser() -> argparse.ArgumentParser:
         --slurm-array-parallelism: number of models to perform mesh test in parallel on the cluster
         --timeout-min: timeout in minutes for each SLURM job in the array
         --slurm-partition: partition to submit SLURM jobs to
+        --submitit-local: run submitit locally using threads. default: False
     """
     parser = argparse.ArgumentParser(
         description="Make reconstructions from pseudo-observations generated from provided simulations using trained "
@@ -138,10 +139,13 @@ def create_parser() -> argparse.ArgumentParser:
         "--timeout-min", type=int, help="timeout in minutes for each SLURM job in the array", default=3600
     )
     parser.add_argument("--slurm-partition", type=str, help="partition to submit SLURM jobs to", default="pGPU")
+    parser.add_argument(
+        "--submitit-local", action="store_true", help="run submitit locally using threads. default: False"
+    )
     return parser
 
 
-def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
+def parse_args(parser: argparse.ArgumentParser) -> (argparse.Namespace, dict):
     """Convert the arguments to a namespace and check if they are valid.
 
     Args:
@@ -165,7 +169,16 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
     except Exception as msg:
         raise ValueError(f"Could not parse the device {args.device}.") from msg
 
-    return args
+    # gather submitit executor arguments
+    submitit_args = dict(
+        timeout_min=args.timeout_min,
+        slurm_array_parallelism=args.slurm_array_parallelism,
+        slurm_additional_parameters=dict(exclusive=True),
+    )
+    if not args.submitit_local:
+        submitit_args["slurm_partition"] = args.slurm_partition
+
+    return args, submitit_args
 
 
 def is_valid_experiment(args: argparse.Namespace, directory: str):
@@ -352,10 +365,6 @@ def mesh_test_multiple_models(args: argparse.Namespace, executor: submitit.AutoE
     mdml_logging.get_logger()
     directories = search_valid_experiments(args)
 
-    executor.update_parameters(
-        slurm_array_parallelism=args.slurm_array_parallelism,
-    )
-
     jobs = []
     with executor.batch():
         for i, directory in enumerate(directories):
@@ -370,21 +379,18 @@ def mesh_test_multiple_models(args: argparse.Namespace, executor: submitit.AutoE
 
 if __name__ == "__main__":
     parser = create_parser()
-    parsed_args = parse_args(parser)
+    parsed_args, submitit_args = parse_args(parser)
 
     # create output directory
     timestamp = datetime.now().strftime("%Y-%d-%m-%H-%M")
     parsed_args.output_dir = os.path.join(parsed_args.output_dir, timestamp)
     os.makedirs(parsed_args.output_dir, exist_ok=True)
 
+    # prepare submitit executor
     submitit_dir = os.path.join(parsed_args.output_dir, ".submitit")
     os.makedirs(submitit_dir, exist_ok=True)
     executor = submitit.AutoExecutor(folder=submitit_dir)
-    executor.update_parameters(
-        timeout_min=parsed_args.timeout_min,
-        slurm_partition=parsed_args.slurm_partition,
-        additional_parameters=dict(exclusive=True),
-    )
+    executor.update_parameters(**submitit_args)
 
     if parsed_args.experiment_dir:
         if parsed_args.mesh_test:
