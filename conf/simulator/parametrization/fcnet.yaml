@@ -1,6 +1,6 @@
 defaults:
   - fully_convolutional_network_base
-  - activation: relu_base
+  - activation: re_lu_base
   - convolution: conv1d_base
   - _self_
 
