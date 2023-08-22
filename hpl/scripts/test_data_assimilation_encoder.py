@@ -365,7 +365,7 @@ def mesh_test_multiple_models(args: argparse.Namespace, executor: submitit.AutoE
             job = executor.submit(mesh_test_single_model, arguments, directory)
             jobs.append(job)
     for job in jobs:
-        print(f"Submitted job {job.job_id} for experiment {directory}.")
+        print(f"Submitted job {job.job_id}.")
 
 
 if __name__ == "__main__":
