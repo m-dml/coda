@@ -39,7 +39,6 @@ datamodule:
     extend_channels: true
 
 simulator:
-  simulator_type: "one_level"
   forcing: 10
   method: "rk4"
 
