@@ -339,7 +339,7 @@ def test_multiple_models(args: argparse.Namespace):
     )
 
 
-def mesh_test_multiple_models(args: argparse.Namespace):
+def mesh_test_multiple_models(args: argparse.Namespace, executor: submitit.AutoExecutor):
     """Test multiple models on a mesh of noise standard deviations and mask fractions.
 
     This function calls mesh_test_single_model for each valid hydra experiment directory found in --experiment-dir.
@@ -352,14 +352,8 @@ def mesh_test_multiple_models(args: argparse.Namespace):
     mdml_logging.get_logger()
     directories = search_valid_experiments(args)
 
-    submitit_dir = os.path.join(args.output_dir, ".submitit")
-    os.makedirs(submitit_dir, exist_ok=True)
-
-    executor = submitit.AutoExecutor(folder=submitit_dir)
     executor.update_parameters(
         slurm_array_parallelism=args.slurm_array_parallelism,
-        timeout_min=args.timeout_min,
-        slurm_partition=args.slurm_partition,
     )
 
     jobs = []
@@ -381,13 +375,21 @@ if __name__ == "__main__":
     parsed_args.output_dir = os.path.join(parsed_args.output_dir, timestamp)
     os.makedirs(parsed_args.output_dir, exist_ok=True)
 
+    submitit_dir = os.path.join(parsed_args.output_dir, ".submitit")
+    os.makedirs(submitit_dir, exist_ok=True)
+    executor = submitit.AutoExecutor(folder=submitit_dir)
+    executor.update_parameters(
+        timeout_min=parsed_args.timeout_min,
+        slurm_partition=parsed_args.slurm_partition,
+    )
+
     if parsed_args.experiment_dir:
         if parsed_args.mesh_test:
-            mesh_test_single_model(parsed_args, parsed_args.experiment_dir)
+            executor.submit(mesh_test_single_model, parsed_args.experiment_dir)
         else:
-            test_single_model(parsed_args)
+            executor.submit(test_single_model, parsed_args)
     elif parsed_args.experiment_file:
         if parsed_args.mesh_test:
-            mesh_test_multiple_models(parsed_args)
+            mesh_test_multiple_models(parsed_args, executor)
         else:
-            test_multiple_models(parsed_args)
+            executor.submit(test_multiple_models, parsed_args)
