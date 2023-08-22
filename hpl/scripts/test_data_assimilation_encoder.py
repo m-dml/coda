@@ -187,7 +187,7 @@ def is_valid_experiment(args: argparse.Namespace, directory: str):
 
     has_checkpoint = True
     try:
-        load_data_assimilation_network(directory, args.device)
+        load_data_assimilation_network(directory)
     except FileNotFoundError as msg:
         logger.warning(msg)
         has_checkpoint = False
