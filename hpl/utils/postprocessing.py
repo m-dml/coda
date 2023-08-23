@@ -28,6 +28,24 @@ def load_test_simulations(path: str, n_simulations: int, device: str = "cpu") ->
     return data
 
 
+def _load_model_from_experiment_directory(directory: str, checkpoint_name: str, device: str = "cpu") -> torch.nn.Module:
+    """Load the model from a checkpoint.
+
+    Args:
+        directory (str): directory where hydra saved the output of the experiment
+        device (str): torch device to load the network to. default: "cpu"
+
+    Returns:
+        torch.nn.Module: model
+    """
+    path_to_checkpoint = os.path.join(directory, checkpoint_name)
+    try:
+        model = torch.load(path_to_checkpoint, map_location=device)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not find checkpoint in {directory}.")
+    return model
+
+
 def load_data_assimilation_network(directory: str, device: str = "cpu") -> torch.nn.Module:
     """Load the data assimilation network from a checkpoint.
 
@@ -38,11 +56,27 @@ def load_data_assimilation_network(directory: str, device: str = "cpu") -> torch
     Returns:
         torch.nn.Module: data assimilation network
     """
-    path_to_checkpoint = os.path.join(directory, "logs/checkpoints/assimilation_network.ckpt")
     try:
-        model = torch.load(path_to_checkpoint, map_location=device)
+        model = _load_model_from_experiment_directory(directory, "logs/checkpoints/assimilation_network.ckpt", device)
     except FileNotFoundError:
-        raise FileNotFoundError(f"Could not find checkpoint in {directory}.")
+        raise FileNotFoundError(f"Could not find `assimilation_network.ckpt` in {directory}.")
+    return model
+
+
+def load_parametrized_simulator(directory: str, device: str = "cpu") -> torch.nn.Module:
+    """Load the data assimilation network from a checkpoint.
+
+    Args:
+        directory (str): directory where hydra saved the output of the experiment
+        device (str): torch device to load the network to. default: "cpu"
+
+    Returns:
+        torch.nn.Module: data assimilation network
+    """
+    try:
+        model = _load_model_from_experiment_directory(directory, "logs/checkpoints/simulator.ckpt", device)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not find `simulator.ckpt` in {directory}.")
     return model
 
 
