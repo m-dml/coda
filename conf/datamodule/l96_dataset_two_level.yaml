@@ -3,7 +3,7 @@ defaults:
   - dataset: l96_training_dataset_base
   - _self_
 
-path_to_load_data: "/gpfs/home/zinchenk/dev/hidden-process-learning/data/training/lorenz-two_level-grid_36-forcing_8.0-dt_0.01-rk4.h5"
+path_to_load_data: "/gpfs/home/zinchenk/dev/hidden-process-learning/data/training/lorenz-two_level-grid_36-forcing_10.0-dt_0.01-rk4.h5"
 path_to_save_data: null
 train_validation_split: 0.8
 shuffle_train: true
