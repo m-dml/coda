@@ -5,7 +5,7 @@ defaults:
   - override /loss: 4dvar
   - override /datamodule: l96_dataset_two_level
   - override /lightning_module: data_assimilation_module
-  - override /optimizer/data_assimilation: adam_base
+  - override /optimizer@optimizer.data_assimilation: adam_base
   - override /lightning_trainer: trainer_base
   - override /lightning_callback/model_checkpoint: model_checkpoint_base
   - override /lightning_callback/early_stopping: early_stopping_base
@@ -21,6 +21,9 @@ assimilation_network_checkpoint: null
 time_step: 0.01
 rollout_length: 10
 input_window_extend: 25
+batch_size: 16
+l96_forcing: 10
+loss_alpha: 1.0
 
 datamodule:
   path_to_save_data: null
@@ -29,13 +32,14 @@ datamodule:
   shuffle_valid: false
   drop_last_batch: true
   pin_memory: false
+  batch_size: ${batch_size}
   dataset:
     rollout_length: ${rollout_length}
     input_window_extend: ${input_window_extend}
     extend_channels: true
 
 loss:
-  alpha: 1.0
+  alpha: ${loss_alpha}
 
 simulator:
   simulator_type: "one_level"

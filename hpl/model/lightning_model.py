@@ -76,12 +76,19 @@ class LightningBaseModel(pl.LightningModule):
             if value is not None:
                 self.log(f"{key}/{stage}", value)
 
-        # Compute metrics
         with torch.no_grad():
             rmse_state_left = self.rmse_func(estimated_state_left.squeeze(1), true_state_left)
             rmse_state_right = self.rmse_func(estimated_state_right.squeeze(1), true_state_right)
             self.log(f"RMSEStateLeft/{stage}", rmse_state_left)
             self.log(f"RMSEStateRight/{stage}", rmse_state_right)
+
+        # Log metrics on validation step
+        if stage == "Validation":
+            self.log("hp/data_missmatch", loss_dict["DataLoss"])
+            if "ModelLoss" in loss_dict and loss_dict["ModelLoss"] is not None:
+                self.log("hp/model_error", loss_dict["ModelLoss"])
+            self.log("hp/ic_error_left", rmse_state_left)
+            self.log("hp/ic_error_right", rmse_state_right)
 
         return loss_dict["TotalLoss"]
 

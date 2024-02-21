@@ -2,20 +2,20 @@ defaults:
   - unet_base
   - encoder: conv_encoder_base
   - encoder/block: conv_block_encoding_base
-  - encoder/block/convolution: conv2d_base
-  - encoder/block/pooling: max_pool2d_base
-  - encoder/block/batch_norm: null
-  - encoder/block/dropout: null
-  - encoder/block/activation: re_lu_base
+  - /convolution@encoder.block.convolution: conv2d_base
+  - /pooling@encoder.block.pooling: max_pool2d_base
+  - /batch_norm@encoder.block.batch_norm: null
+  - /dropout@encoder.block.dropout: null
+  - /activation@encoder.block.activation: re_lu_base
   - decoder: conv_decoder_base
   - decoder/block: conv_block_decoding_base
-  - decoder/block/convolution: conv1d_base
-  - decoder/block/upscale: conv_transpose1d_base
-  - decoder/block/batch_norm: null
-  - decoder/block/dropout: null
-  - decoder/block/activation: re_lu_base
+  - /convolution@decoder.block.convolution: conv1d_base
+  - /convolution@decoder.block.upscale: conv_transpose1d_base
+  - /batch_norm@decoder.block.batch_norm: null
+  - /dropout@decoder.block.dropout: null
+  - /activation@decoder.block.activation: re_lu_base
   - global_pool: global_max_pool_base
-  - output_convolution: conv1d_base
+  - /convolution@output_convolution: conv1d_base
 
   - _self_
 
