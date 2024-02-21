@@ -3,13 +3,13 @@ defaults:
   - /hydra/callbacks:
       - log_git_hash
   - simulator: l96_simulator_base
-  - simulator/parametrization: null
+  - /simulator/parametrization: null
   - assimilation_network: unet
   - datamodule: l96_dataset_one_level
   - loss: 4dvar
   - lightning_module: data_assimilation_module
-  - optimizer/data_assimilation: adam_base
-  - optimizer/parametrization: null
+  - /optimizer@optimizer.data_assimilation: adam_base
+  - /optimizer@optimizer.parametrization: null
   - lightning_trainer: trainer_base
   - lightning_logger/tensor_board_logger: tensor_board_logger_base
   - lightning_callback/model_checkpoint: model_checkpoint_base

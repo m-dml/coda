@@ -38,10 +38,28 @@ def main(cfg: DictConfig):
             lightning_module.assimilation_network = torch.load(cfg.assimilation_network_checkpoint, map_location="cpu")
 
         hydra_params = mdml_logging.get_hparams_from_hydra_config(config=cfg, model=lightning_module)
+
+        # delete all dicts and lists from hydra_params
+        keys_to_delete = []
+        for key, value in hydra_params.items():
+            if isinstance(value, DictConfig) or isinstance(value, list) or isinstance(value, dict):
+                keys_to_delete.append(key)
+
+        for key in keys_to_delete:
+            del hydra_params[key]
+
         for this_logger in logger:
             if "tensorboard" in str(this_logger):
                 console_logger.info("Add hparams to tensorboard")
-                this_logger.log_hyperparams(hydra_params, {"hp/loss": 0, "hp/variance": 0, "hp/epoch": 0})
+                this_logger.log_hyperparams(
+                    hydra_params,
+                    {
+                        "hp/data_missmatch": 0,
+                        "hp/model_error": 0,
+                        "hp/ic_error_left": 0,
+                        "hp/ic_error_right": 0,
+                    },
+                )
             else:
                 this_logger.log_hyperparams(hydra_params)
 

@@ -1,47 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Union
-
-
-@dataclass
-class PeriodicConv1d:
-    _target_: str = "hpl.model.periodic.PeriodicConv1d"
-    _recursive_: bool = True
-    _convert_: Any = None
-    _partial_: bool = False
-
-    # dataclass args:
-    in_channels: Union[int, None] = None
-    out_channels: Union[int, None] = None
-    kernel_size: Any = None
-    stride: Any = 1
-    padding: Any = 0
-    dilation: Any = 1
-    groups: int = 1
-    bias: bool = True
-    padding_mode: str = "zeros"
-    device: Any = None
-    dtype: Any = None
-
-
-@dataclass
-class PeriodicConv2d:
-    _target_: str = "hpl.model.periodic.PeriodicConv2d"
-    _recursive_: bool = True
-    _convert_: Any = None
-    _partial_: bool = False
-
-    # dataclass args:
-    in_channels: Union[int, None] = None
-    out_channels: Union[int, None] = None
-    kernel_size: Union[int, None] = None
-    stride: int = 1
-    padding: Union[str, int] = 0
-    dilation: int = 1
-    groups: int = 1
-    bias: bool = True
-    padding_mode: str = "zeros"
-    device: Any = None
-    dtype: Any = None
+from typing import Any
 
 
 @dataclass

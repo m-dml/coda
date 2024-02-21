@@ -15,8 +15,6 @@ from hpl.lib.unet import (
     ConvolutionalEncodingBlock,
     GlobalAvgPool,
     GlobalMaxPool,
-    PeriodicConv1d,
-    PeriodicConv2d,
     Unet,
 )
 
@@ -24,37 +22,7 @@ from hpl.lib.unet import (
 def register_configs() -> None:
     cs = ConfigStore.instance()
     # add hydra models from mdml_tools
-    rename_groups = {
-        "optimizer": ["optimizer/data_assimilation", "optimizer/parametrization"],
-        "simulator": ["simulator", "datamodule/simulator"],
-        "model": "simulator/parametrization",
-        "activation": [
-            "simulator/parametrization/activation",
-            "assimilation_network/encoder/block/activation",
-            "assimilation_network/decoder/block/activation",
-        ],
-        "convolution": [
-            "simulator/parametrization/convolution",
-            "assimilation_network/encoder/block/convolution",
-            "assimilation_network/decoder/block/convolution",
-            "assimilation_network/decoder/block/upscale",
-            "assimilation_network/output_convolution",
-        ],
-        "batch_norm": [
-            "simulator/parametrization/batch_norm",
-            "assimilation_network/encoder/block/batch_norm",
-            "assimilation_network/decoder/block/batch_norm",
-        ],
-        "dropout": [
-            "simulator/parametrization/dropout",
-            "assimilation_network/encoder/block/dropout",
-            "assimilation_network/decoder/block/dropout",
-        ],
-        "pooling": [
-            "assimilation_network/encoder/block/pooling",
-        ],
-    }
-    add_hydra_models_to_config_store(cs, rename_groups)
+    add_hydra_models_to_config_store(cs)
 
     # loss:
     cs.store(name="4dvar", node=Four4DVarLoss, group="loss")
@@ -63,7 +31,7 @@ def register_configs() -> None:
     model_group = "simulator"
     cs.store(name="l96_parametrized_base", node=L96Parametrized, group=model_group)
 
-    # encoder:
+    # assimilation network
     cs.store("unet_base", node=Unet, group="assimilation_network")
     cs.store("conv_encoder_base", node=ConvolutionalEncoder, group="assimilation_network/encoder")
     cs.store("conv_block_encoding_base", node=ConvolutionalEncodingBlock, group="assimilation_network/encoder/block")
@@ -72,11 +40,7 @@ def register_configs() -> None:
     cs.store("global_max_pool_base", node=GlobalMaxPool, group="assimilation_network/global_pool")
     cs.store("global_avg_pool_base", node=GlobalAvgPool, group="assimilation_network/global_pool")
 
-    for group_name in rename_groups["convolution"]:
-        cs.store("periodic_conv1d_base", node=PeriodicConv1d, group=group_name)
-        cs.store("periodic_conv2d_base", node=PeriodicConv2d, group=group_name)
-
-    # parametrization:
+    # parametrization:`
     cs.store(name="fully_convolutional_network_base", node=FullyConvolutionalNetwork, group="simulator/parametrization")
 
     # lightning module:
@@ -102,6 +66,9 @@ class Config:
     time_step: float = MISSING
     rollout_length: int = MISSING
     input_window_extend: int = MISSING
+    batch_size: int = MISSING
+    l96_forcing: float = MISSING
+    loss_alpha: float = MISSING
 
     simulator: Any = MISSING
     assimilation_network: Any = MISSING
