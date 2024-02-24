@@ -14,26 +14,38 @@ class L96BaseDataset(Dataset):
 
     Args:
         ground_truth_data (torch.Tensor): ground truth data. This tensor should have shape [1, time, x_grid_size]
-        additional_noise_std (float): standard deviation of additional noise.
-        mask_fraction (float): fraction of data to be masked.
-        mask_fill_value (float): value to fill masked data with.
+        additional_noise_std (float): standard deviation of additional noise. default: 0.0
+        random_mask_fraction (float): fraction of random mask. default: 0.0
+        mask_even_locations (bool): whether to mask even locations. default: False
+        mask_fill_value (float): value to fill masked locations. default: 0.0
+        path_to_save_data (str): path to save observations data. default: None
     """
 
     def __init__(
         self,
         ground_truth_data: torch.Tensor,
-        additional_noise_std: float,
-        mask_fraction: float,
+        additional_noise_std: float = 0.0,
+        random_mask_fraction: float = 0.0,
+        mask_even_locations: bool = False,
         mask_fill_value: float = 0.0,
         path_to_save_data: str = None,
     ):
         self.additional_noise_std = additional_noise_std
-        self.mask_fraction = mask_fraction
+        self.random_mask_fraction = random_mask_fraction
+        self.mask_even_locations = mask_even_locations
         self.mask_fill_value = mask_fill_value
 
         self.ground_truth = ground_truth_data
-        observations = self.apply_additional_noise(self.ground_truth)
-        self.observations, self.mask = self.apply_mask(observations)
+        self.observations = self.ground_truth.clone()
+        self.mask = torch.full_like(self.ground_truth, 1.0)
+        if self.additional_noise_std > 0:
+            self.observations = self.apply_additional_noise(self.ground_truth)
+        if self.random_mask_fraction > 0:
+            self.observations, self.mask = self.apply_random_mask(self.observations)
+            print(self.mask)
+        if self.mask_even_locations:
+            self.mask[..., ::2] = 0.0
+            self.observations[..., ::2] = self.mask_fill_value
 
         if path_to_save_data is not None:
             if not os.path.exists(path_to_save_data):
@@ -48,9 +60,9 @@ class L96BaseDataset(Dataset):
         observations = ground_truth + noise
         return observations
 
-    def apply_mask(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    def apply_random_mask(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         size = observations.size()
-        n_masked_per_step = int(size[-1] * self.mask_fraction)
+        n_masked_per_step = int(size[-1] * self.random_mask_fraction)
         sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices
         mask = torch.zeros(size, device="cpu", dtype=torch.bool)
         mask.scatter_(dim=-1, index=sample, value=True)

@@ -7,7 +7,8 @@ class L96BaseDataset:
     _target_: str = "hpl.datamodule.DataLoader.L96BaseDataset"
     _recursive_: bool = False
     additional_noise_std: float = 1.0
-    mask_fraction: float = 0.75
+    random_mask_fraction: float = 0.75
+    mask_even_locations: bool = False
     mask_fill_value: float = 0.0
     path_to_save_data: Any = None
 
