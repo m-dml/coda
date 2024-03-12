@@ -42,7 +42,7 @@ class L96BaseDataset(Dataset):
             self.observations = self.apply_additional_noise(self.ground_truth)
         if self.random_mask_fraction > 0:
             self.observations, self.mask = self.apply_random_mask(self.observations)
-            print(self.mask)
+
         if self.mask_even_locations:
             self.mask[..., ::2] = 0.0
             self.observations[..., ::2] = self.mask_fill_value
@@ -93,7 +93,6 @@ class L96TrainingDataset(L96BaseDataset):
     ):
         super().__init__(**kwargs)
         self.rollout_length = rollout_length
-
         self.window_extend = rollout_length
         self.use_standard_input_window_extend = True
         if input_window_extend is not None:

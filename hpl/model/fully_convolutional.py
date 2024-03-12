@@ -33,7 +33,7 @@ class FullyConvolutionalNetwork(nn.Module):
         model.append(self.conv_factory(in_channels=self.layers[0], out_channels=self.layers[1]))
         for i in range(1, len(self.layers) - 1):
             if use_batch_norm:
-                model.append(self.batch_norm_factory())
+                model.append(self.batch_norm_factory(num_features=self.layers[i]))
             model.append(self.activation_factory())
             if use_dropout:
                 model.append(self.dropout_factory())
