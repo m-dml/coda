@@ -92,7 +92,6 @@ class L96TrainingDataset(L96BaseDataset):
     ):
         super().__init__(**kwargs)
         self.rollout_length = rollout_length
-
         self.window_extend = rollout_length
         self.use_standard_input_window_extend = True
         if input_window_extend is not None:
