@@ -63,7 +63,7 @@ class L96BaseDataset(Dataset):
     def apply_random_mask(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         size = observations.size()
         n_masked_per_step = int(size[-1] * self.random_mask_fraction)
-        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices
+        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices.to(observations.device)
         mask = torch.zeros(size, device="cpu", dtype=torch.bool).to(observations.device)
         mask.scatter_(dim=-1, index=sample, value=True)
         observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
