@@ -55,7 +55,7 @@ class L96BaseDataset(Dataset):
 
     def apply_additional_noise(self, ground_truth: torch.Tensor) -> torch.Tensor:
         size = ground_truth.size()
-        noise = torch.normal(mean=0, std=self.additional_noise_std, size=size, device="cpu")
+        noise = torch.normal(mean=0, std=self.additional_noise_std, size=size, device="cpu").to(ground_truth.device)
         observations = ground_truth + noise
         return observations
 
@@ -63,7 +63,7 @@ class L96BaseDataset(Dataset):
         size = observations.size()
         n_masked_per_step = int(size[-1] * self.random_mask_fraction)
         sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices
-        mask = torch.zeros(size, device="cpu", dtype=torch.bool)
+        mask = torch.zeros(size, device="cpu", dtype=torch.bool).to(observations.device)
         mask.scatter_(dim=-1, index=sample, value=True)
         observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
         mask_inverse = torch.logical_not(mask).float()
