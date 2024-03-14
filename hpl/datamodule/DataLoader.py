@@ -40,11 +40,13 @@ class L96BaseDataset(Dataset):
         self.mask = torch.full_like(self.ground_truth, 1.0)
         if self.additional_noise_std > 0:
             self.observations = self.apply_additional_noise(self.ground_truth)
-        if self.random_mask_fraction > 0:
-            self.observations, self.mask = self.apply_random_mask(self.observations)
         if self.mask_even_locations:
+            if self.random_mask_fraction > 0:
+                self.observations, self.mask = self.apply_random_mask(self.observations, dim=-2)
             self.mask[..., ::2] = 0.0
             self.observations[..., ::2] = self.mask_fill_value
+        else:
+            self.observations, self.mask = self.apply_random_mask(self.observations, dim=-1)
 
         if path_to_save_data is not None:
             if not os.path.exists(path_to_save_data):
@@ -59,12 +61,12 @@ class L96BaseDataset(Dataset):
         observations = ground_truth + noise
         return observations
 
-    def apply_random_mask(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    def apply_random_mask(self, observations: torch.Tensor, dim=-1) -> (torch.Tensor, torch.Tensor):
         size = observations.size()
-        n_masked_per_step = int(size[-1] * self.random_mask_fraction)
-        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=-1).indices.to(observations.device)
+        n_masked_per_step = int(size[dim] * self.random_mask_fraction)
+        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=dim).indices.to(observations.device)
         mask = torch.zeros(size, device="cpu", dtype=torch.bool).to(observations.device)
-        mask.scatter_(dim=-1, index=sample, value=True)
+        mask.scatter_(dim=dim, index=sample, value=True)
         observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
         mask_inverse = torch.logical_not(mask).float()
         return observations, mask_inverse
