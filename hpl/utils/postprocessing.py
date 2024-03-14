@@ -3,6 +3,7 @@ import os
 import h5py
 import pandas as pd
 import torch
+from torch.utils.data import Dataset
 from omegaconf import DictConfig, OmegaConf
 
 
@@ -161,3 +162,22 @@ def dictconfig_to_dataframe(config: DictConfig, full_keys: list[str] = None, sep
             entry = entry[the_key]
         new_keys_dict[key] = [entry]
     return pd.DataFrame(new_keys_dict)
+
+
+def reconstruct_observations(dataset: Dataset, assimilation_network: torch.nn.Module, verbose: bool = False) -> torch.Tensor:
+    """Reconstruct observations using trained assimilation network instance
+    Args:
+        dataset (Dataset): observations inference dataset
+        assimilation_network (torch.nn.Module): trained data assimilation network
+        verbose (bool): show progress bar
+    Return:
+        torch.Tensor: analysis field
+    """
+    reconstractions = []
+    iterator = tqdm(dataset) if verbose else dataset
+    with torch.no_grad():
+        for batch in iterator:
+            reconstructed_state = assimilation_network.forward(batch)
+            reconstractions.append(reconstructed_state)
+    reconstractions = torch.stack(reconstractions, dim=-2).squeeze()
+    return reconstractions
