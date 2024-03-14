@@ -1,6 +1,7 @@
 defaults:
   - l96_datamodule_base
   - dataset: l96_training_dataset_base
+  - observation_model: random_observation_model_base
   - _self_
 
 path_to_load_data: "/gpfs/home/zinchenk/dev/hidden-process-learning/data/training/lorenz-two_level-grid_36-forcing_10.0-dt_0.01-rk4.h5"
@@ -17,7 +18,7 @@ dataset:
   rollout_length: 1
   input_window_extend: 10
   extend_channels: true
+
+observation_model:
   additional_noise_std: 1.0
   random_mask_fraction: 0.75
-  mask_even_locations: true
-  mask_fill_value: 0.0

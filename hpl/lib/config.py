@@ -8,6 +8,11 @@ from hpl.lib.datamodule import L96DataLoader, L96InferenceDataset, L96TrainingDa
 from hpl.lib.lightning_module import DataAssimilationModule, ParameterTuningModule, ParametrizationLearningModule
 from hpl.lib.loss import Four4DVarLoss
 from hpl.lib.model import FullyConvolutionalNetwork, L96Parametrized
+from hpl.lib.observation_models import (
+    EvenLocationsObservationModel,
+    RandomLocationsObservationModel,
+    RandomObservationModel,
+)
 from hpl.lib.unet import (
     ConvolutionalDecoder,
     ConvolutionalDecodingBlock,
@@ -52,6 +57,17 @@ def register_configs() -> None:
     cs.store(name="l96_datamodule_base", node=L96DataLoader, group="datamodule")
     cs.store(name="l96_training_dataset_base", node=L96TrainingDataset, group="datamodule/dataset")
     cs.store(name="l96_inference_dataset_base", node=L96InferenceDataset, group="datamodule/dataset")
+    cs.store(name="random_observation_model_base", node=RandomObservationModel, group="datamodule/observation_model")
+    cs.store(
+        name="even_locations_observation_model_base",
+        node=EvenLocationsObservationModel,
+        group="datamodule/observation_model",
+    )
+    cs.store(
+        name="random_locations_observation_model_base",
+        node=RandomLocationsObservationModel,
+        group="datamodule/observation_model",
+    )
 
     # register the base config class (this name has to be called in config.yaml):
     cs.store(name="base_config", node=Config)

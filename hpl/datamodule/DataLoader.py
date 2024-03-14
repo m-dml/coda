@@ -14,39 +14,19 @@ class L96BaseDataset(Dataset):
 
     Args:
         ground_truth_data (torch.Tensor): ground truth data. This tensor should have shape [1, time, x_grid_size]
-        additional_noise_std (float): standard deviation of additional noise. default: 0.0
-        random_mask_fraction (float): fraction of random mask. default: 0.0
-        mask_even_locations (bool): whether to mask even locations. default: False
-        mask_fill_value (float): value to fill masked locations. default: 0.0
+        observation_model (torch.nn.Module): observation model configuration
         path_to_save_data (str): path to save observations data. default: None
     """
 
     def __init__(
         self,
         ground_truth_data: torch.Tensor,
-        additional_noise_std: float = 0.0,
-        random_mask_fraction: float = 0.0,
-        mask_even_locations: bool = False,
-        mask_fill_value: float = 0.0,
+        observation_model: torch.nn.Module,
         path_to_save_data: str = None,
     ):
-        self.additional_noise_std = additional_noise_std
-        self.random_mask_fraction = random_mask_fraction
-        self.mask_even_locations = mask_even_locations
-        self.mask_fill_value = mask_fill_value
-
         self.ground_truth = ground_truth_data
-        self.observations = self.ground_truth.clone()
-        self.mask = torch.full_like(self.ground_truth, 1.0)
-        if self.additional_noise_std > 0:
-            self.observations = self.apply_additional_noise(self.ground_truth)
-        if self.mask_even_locations:
-            if self.random_mask_fraction > 0:
-                self.observations, self.mask = self.apply_random_mask(self.observations, dim=-2)
-            self.mask[..., ::2] = 0.0
-            self.observations[..., ::2] = self.mask_fill_value
-        else:
-            self.observations, self.mask = self.apply_random_mask(self.observations, dim=-1)
+        self.observation_model = observation_model
+        self.observations, self.mask = self.observation_model.forward(self.ground_truth)
 
         if path_to_save_data is not None:
             if not os.path.exists(path_to_save_data):
@@ -54,22 +34,6 @@ class L96BaseDataset(Dataset):
             torch.save(self.ground_truth, os.path.join(path_to_save_data, "ground_truth.pt"))
             torch.save(self.observations, os.path.join(path_to_save_data, "observations.pt"))
             torch.save(self.mask, os.path.join(path_to_save_data, "mask.pt"))
-
-    def apply_additional_noise(self, ground_truth: torch.Tensor) -> torch.Tensor:
-        size = ground_truth.size()
-        noise = torch.normal(mean=0, std=self.additional_noise_std, size=size, device="cpu").to(ground_truth.device)
-        observations = ground_truth + noise
-        return observations
-
-    def apply_random_mask(self, observations: torch.Tensor, dim=-1) -> (torch.Tensor, torch.Tensor):
-        size = observations.size()
-        n_masked_per_step = int(size[dim] * self.random_mask_fraction)
-        sample = torch.rand(size, device="cpu").topk(n_masked_per_step, dim=dim).indices.to(observations.device)
-        mask = torch.zeros(size, device="cpu", dtype=torch.bool).to(observations.device)
-        mask.scatter_(dim=dim, index=sample, value=True)
-        observations = torch.masked_fill(observations, mask, value=self.mask_fill_value)
-        mask_inverse = torch.logical_not(mask).float()
-        return observations, mask_inverse
 
 
 class L96TrainingDataset(L96BaseDataset):
@@ -227,6 +191,7 @@ class L96DataLoader(pl.LightningDataModule):
     def __init__(
         self,
         dataset: DictConfig,
+        observation_model: DictConfig,
         path_to_load_data: str,
         path_to_save_data: str = None,
         train_validation_split: float = 0.75,
@@ -239,6 +204,7 @@ class L96DataLoader(pl.LightningDataModule):
     ):
         super().__init__()
         self.dataset = dataset
+        self.observation_model = hydra.utils.instantiate(observation_model)
         self.path_to_load_data = path_to_load_data
         self.path_to_save_data = path_to_save_data
         self.train_validation_split = train_validation_split
@@ -258,12 +224,14 @@ class L96DataLoader(pl.LightningDataModule):
             self.dataset,
             ground_truth_data=simulation[:, :training_split, :],
             path_to_save_data=os.path.join(self.path_to_save_data, "train") if self.path_to_save_data else None,
+            observation_model=self.observation_model,
         )
 
         self.valid_data: Dataset = hydra.utils.instantiate(
             self.dataset,
             ground_truth_data=simulation[:, training_split:, :],
             path_to_save_data=os.path.join(self.path_to_save_data, "valid") if self.path_to_save_data else None,
+            observation_model=self.observation_model,
         )
 
     def train_dataloader(self) -> DataLoader:

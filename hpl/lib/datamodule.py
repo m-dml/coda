@@ -6,11 +6,8 @@ from typing import Any
 class L96BaseDataset:
     _target_: str = "hpl.datamodule.DataLoader.L96BaseDataset"
     _recursive_: bool = False
-    additional_noise_std: float = 1.0
-    random_mask_fraction: float = 0.75
-    mask_even_locations: bool = False
-    mask_fill_value: float = 0.0
     path_to_save_data: Any = None
+    observation_model: Any = None
 
 
 @dataclass
@@ -34,6 +31,7 @@ class L96InferenceDataset(L96BaseDataset):
 @dataclass
 class L96DataLoader:
     dataset: Any
+    observation_model: Any
     path_to_load_data: str
     path_to_save_data: Any = None
     train_validation_split: float = 0.75
