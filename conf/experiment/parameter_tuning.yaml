@@ -23,7 +23,7 @@ time_step: 0.01
 rollout_length: 10
 input_window_extend: 25
 batch_size: 16
-l96_forcing: 8
+l96_forcing: 8.0
 loss_alpha: 1.0
 
 datamodule:
@@ -53,10 +53,11 @@ lightning_module:
 lightning_trainer:
   max_epochs: 100
   log_every_n_steps: 50
+  val_check_interval: 0.5
   detect_anomaly: false
   fast_dev_run: false
-  devices: 1
   deterministic: false
+  devices: 1
 
 lightning_logger:
   tensor_board_logger:
