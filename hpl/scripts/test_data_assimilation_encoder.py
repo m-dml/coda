@@ -30,6 +30,7 @@ from omegaconf import OmegaConf
 from tqdm import tqdm
 
 from hpl.datamodule import L96InferenceDataset
+from hpl.datamodule.observational_models import RandomObservationModel
 from hpl.utils.postprocessing import (
     find_experiments_directories,
     load_data_assimilation_network,
@@ -270,11 +271,14 @@ def test_single_model(
     config = load_hydra_config(arguments.experiment_dir)
     model = load_data_assimilation_network(arguments.experiment_dir, arguments.device)
     simulations = load_test_data(arguments)
+    observation_operator = RandomObservationModel(
+        additional_noise_std=arguments.noise_std,
+        random_mask_fraction=arguments.mask_fraction,
+    )
     dataset = L96InferenceDataset(
+        observation_model=observation_operator,
         ground_truth_data=simulations,
         input_window_extend=config.datamodule.dataset.input_window_extend,
-        mask_fraction=arguments.mask_fraction,
-        additional_noise_std=arguments.noise_std,
         drop_edge_samples=arguments.ignore_edges,
     )
     dataset.to(arguments.device)
