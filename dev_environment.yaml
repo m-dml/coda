@@ -1,4 +1,4 @@
-name: hpl-torch
+name: wcnnda
 
 channels:
   - conda-forge
@@ -28,7 +28,9 @@ dependencies:
   - gitpython
   - numpy
   - seaborn
-  - pillow
+  - numpy
+  - scipy
+  - pandas
   - tqdm
   - pylint
   - setuptools_scm
@@ -37,4 +39,7 @@ dependencies:
       - torch-tb-profiler
       - hydra-colorlog
       - hydra-submitit-launcher
+      - submitit
+      - h5py
       - git+https://codebase.helmholtz.cloud/m-dml/mdml-tools.git
+
