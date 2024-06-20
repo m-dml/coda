@@ -127,6 +127,8 @@ class L96InferenceDataset(L96BaseDataset):
     def __init__(
         self,
         input_window_extend: int,
+        observations: torch.Tensor = None,
+        mask: torch.Tensor = None,
         extend_channels: bool = True,
         drop_edge_samples: bool = True,
         **kwargs,
@@ -135,6 +137,11 @@ class L96InferenceDataset(L96BaseDataset):
         self.window_extend = input_window_extend
         self.extend_channels = extend_channels
         self.drop_edge_samples = drop_edge_samples
+
+        if observations is not None:
+            self.observations = observations
+        if mask is not None:
+            self.mask = mask
 
         self.data = torch.stack([self.ground_truth, self.observations, self.mask], dim=1)
         self.zeros_padding_data_tensors()
