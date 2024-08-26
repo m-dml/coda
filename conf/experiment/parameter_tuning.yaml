@@ -20,7 +20,7 @@ random_seed: 111
 
 assimilation_network_checkpoint: null
 time_step: 0.01
-rollout_length: 10
+rollout_length: 25
 input_window_extend: 25
 batch_size: 16
 l96_forcing: 8.0

@@ -29,9 +29,9 @@ from mdml_tools.utils import logging as mdml_logging
 from omegaconf import OmegaConf
 from tqdm import tqdm
 
-from hpl.datamodule import L96InferenceDataset
-from hpl.datamodule.observational_models import RandomObservationModel
-from hpl.utils.postprocessing import (
+from coda.datamodule import L96InferenceDataset
+from coda.datamodule.observational_models import RandomObservationModel
+from coda.utils.postprocessing import (
     find_experiments_directories,
     load_data_assimilation_network,
     load_hydra_config,

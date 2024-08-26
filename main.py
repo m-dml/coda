@@ -6,8 +6,8 @@ import torch.random
 from mdml_tools.utils import logging as mdml_logging
 from omegaconf import DictConfig
 
-from hpl.initializations import init_callbacks, init_datamodule, init_lightning_module, init_logger, init_trainer
-from hpl.lib.config import register_configs
+from coda.initializations import init_callbacks, init_datamodule, init_lightning_module, init_logger, init_trainer
+from coda.lib.config import register_configs
 
 register_configs()
 

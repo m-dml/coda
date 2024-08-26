@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from omegaconf import DictConfig
 
-from hpl.model.fully_convolutional import FullyConvolutionalNetwork
+from coda.model.fully_convolutional import FullyConvolutionalNetwork
 
 
 class ConvolutionalEncodingBlock(FullyConvolutionalNetwork):
