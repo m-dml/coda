@@ -2,7 +2,7 @@
 A novel method for training data assimilation networks directry from sparse and noisy observations, tuning free parameters of a simulator and learning effect of unresolved processes.
 
 ## Data generation
-Lorenz'96 training data can be generated using generation script from [mdml-tools](https://codebase.helmholtz.cloud/m-dml/mdml-tools/-/blob/main/mdml_tools/scripts/generate_lorenz_data.py).
+Lorenz'96 training data can be generated using generation script from [mdml-tools](https://codebase.helmholtz.cloud/m-dml/mdml-tools/-/blob/main/mdml_tools/scripts/generate_lorenz_data.py). Our training code supports training using one long Lorenz'96 simulation that is going to be split into training and validation subsets.
 
 
 ## Running experiments
