@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-name = "hpl"
+name = "coda"
 dynamic = ["version", "readme"]
 authors = [
   { name="Vadim Zinchenko", email="vadim.zinchenko@hereon.de" },
@@ -18,11 +18,11 @@ classifiers = [
 
 
 [tool.setuptools]
-packages = ["hpl"]
+packages = ["coda"]
 
 
 [tool.setuptools_scm]
-write_to = "hpl/_version.py"
+write_to = "coda/_version.py"
 
 
 [tool.setuptools.dynamic]
@@ -33,7 +33,7 @@ readme = {file = ["README.rst"]}
 exclude = ["conf/", "data/", "docs/", "notebooks/", "output*/", "logs/", "tests/"]
 make_whitelist = false
 min_confidence = 80
-paths = ["hpl/"]
+paths = ["coda/"]
 sort_by_size = true
 verbose = false
 ignore_names = ["args", "kwargs"]
@@ -67,6 +67,6 @@ ignore = ["tests", "_version.py", "docs", "notebooks", "data", "conf", "output*"
 
 [tool.isort]
 profile = "black"
-src_paths = ["hpl"]
+src_paths = ["coda"]
 line_length = 120
 force_alphabetical_sort_within_sections = true

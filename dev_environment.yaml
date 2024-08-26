@@ -1,4 +1,4 @@
-name: wcnnda
+name: coda_env
 
 channels:
   - conda-forge
@@ -42,4 +42,3 @@ dependencies:
       - submitit
       - h5py
       - git+https://codebase.helmholtz.cloud/m-dml/mdml-tools.git
-
