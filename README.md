@@ -4,6 +4,7 @@ A novel method for training data assimilation networks directry from sparse and 
 ## Data generation
 Lorenz'96 training data can be generated using generation script from [mdml-tools](https://codebase.helmholtz.cloud/m-dml/mdml-tools/-/blob/main/mdml_tools/scripts/generate_lorenz_data.py). Our training code supports training using one long Lorenz'96 simulation that is going to be split into training and validation subsets.
 
+Once data have been generated using the script above, you'll need to edit configuration files to set the path to the data, or override the appropriate argument from the command line.
 
 ## Running experiments
 We use hydra to manage config files for our experiments. To see all availabable parameters and flags refere to corresponding experiment configs in `conf/experiment`. All parameters can be overwritten from command line.
